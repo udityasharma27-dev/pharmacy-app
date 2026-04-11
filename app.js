@@ -16,6 +16,8 @@ let activeStoreId = localStorage.getItem("activeStoreId") || "";
 let medicines = [];
 let bills = [];
 let allBills = [];
+let transfers = [];
+let transferInventory = [];
 let cart = JSON.parse(localStorage.getItem("pharmacyCart") || "[]");
 let editState = null;
 let selectedCustomer = JSON.parse(localStorage.getItem("selectedCustomer") || "null");
@@ -30,6 +32,7 @@ let isLookingUpCustomer = false;
 let isSavingMember = false;
 let isRefreshingData = false;
 let refreshTimer = null;
+let isSubmittingTransfer = false;
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -199,10 +202,12 @@ async function loadCurrentUser() {
   document.getElementById("ownerPanel").hidden = !isOwner();
   const staffCreatePanel = document.getElementById("staffCreatePanel");
   const storePanel = document.getElementById("storePanel");
+  const transferPanel = document.getElementById("transferPanel");
   const storeSwitcherWrap = document.getElementById("storeSwitcherWrap");
   const addStockQuickAction = document.getElementById("addStockQuickAction");
   if (staffCreatePanel) staffCreatePanel.hidden = !isOwner();
   if (storePanel) storePanel.hidden = !isOwner();
+  if (transferPanel) transferPanel.hidden = !isOwner();
   if (storeSwitcherWrap) storeSwitcherWrap.hidden = !isOwner();
   if (addStockQuickAction) addStockQuickAction.hidden = !isOwner();
 }
@@ -247,6 +252,12 @@ async function loadData() {
     allBills = isOwner()
       ? (Array.isArray(billResults[1]) ? billResults[1] : bills)
       : bills;
+    if (isOwner()) {
+      const transferData = await fetchJson("/medicines/transfers?limit=20");
+      transfers = Array.isArray(transferData.transfers) ? transferData.transfers : [];
+    } else {
+      transfers = [];
+    }
 
     if (selectedBillingChoice) selectedBillingChoice = getChoiceByIds(selectedBillingChoice.medicineId, selectedBillingChoice.brandId);
 
@@ -343,6 +354,15 @@ function renderStoreControls() {
     staffStore.innerHTML = '<option value="">No store assigned</option>' + stores.map(store => `<option value="${store._id}">${escapeHtml(store.name)}</option>`).join("");
   }
 
+  const transferFromStore = document.getElementById("transferFromStore");
+  const transferToStore = document.getElementById("transferToStore");
+  if (transferFromStore && transferToStore) {
+    const options = stores.map(store => `<option value="${store._id}">${escapeHtml(store.name)}</option>`).join("");
+    transferFromStore.innerHTML = '<option value="">Select source store</option>' + options;
+    transferToStore.innerHTML = '<option value="">Select destination store</option>' + options;
+    if (!transferFromStore.value && activeStoreId) transferFromStore.value = activeStoreId;
+  }
+
   const storeList = document.getElementById("storeList");
   if (!storeList) return;
   if (!stores.length) {
@@ -356,6 +376,127 @@ function renderStoreControls() {
       <div class="meta">${escapeHtml(store.code || "No code")} | ${escapeHtml(store.phone || "No phone")} | ${escapeHtml(store.address || "No address")}</div>
     </div>
   `).join("");
+}
+
+function getTransferInventoryChoice(medicineId, brandId) {
+  const medicine = transferInventory.find(item => item._id === medicineId);
+  const brand = medicine?.brands?.find(item => item._id === brandId);
+  if (!medicine || !brand) return null;
+  return { medicine, brand };
+}
+
+async function handleTransferSourceChange() {
+  const sourceStoreId = document.getElementById("transferFromStore")?.value || "";
+  const medicineSelect = document.getElementById("transferMedicine");
+  const brandSelect = document.getElementById("transferBrand");
+  const hint = document.getElementById("transferStockHint");
+
+  transferInventory = [];
+  if (medicineSelect) medicineSelect.innerHTML = '<option value="">Select medicine</option>';
+  if (brandSelect) brandSelect.innerHTML = '<option value="">Select brand</option>';
+
+  if (!sourceStoreId) {
+    if (hint) hint.textContent = "Choose a source store to load available stock for transfer.";
+    return;
+  }
+
+  try {
+    const data = await fetchJson(`/medicines?storeId=${encodeURIComponent(sourceStoreId)}`);
+    transferInventory = Array.isArray(data) ? data : [];
+    if (!transferInventory.length) {
+      if (hint) hint.textContent = "No medicines found in the selected source store.";
+      return;
+    }
+
+    medicineSelect.innerHTML = '<option value="">Select medicine</option>' + transferInventory
+      .map(item => `<option value="${item._id}">${escapeHtml(item.salt)} (${escapeHtml(item.category || "General")})</option>`)
+      .join("");
+    if (hint) hint.textContent = `Loaded ${transferInventory.length} medicines from the selected source store.`;
+  } catch (error) {
+    if (hint) hint.textContent = error.message;
+  }
+}
+
+function loadTransferBrands() {
+  const medicineId = document.getElementById("transferMedicine")?.value || "";
+  const brandSelect = document.getElementById("transferBrand");
+  const hint = document.getElementById("transferStockHint");
+  const medicine = transferInventory.find(item => item._id === medicineId);
+
+  if (!brandSelect) return;
+
+  if (!medicine) {
+    brandSelect.innerHTML = '<option value="">Select brand</option>';
+    if (hint) hint.textContent = "Select a medicine to see transferable brands.";
+    return;
+  }
+
+  const availableBrands = (medicine.brands || []).filter(item => Number(item.quantity || 0) > 0);
+  brandSelect.innerHTML = '<option value="">Select brand</option>' + availableBrands
+    .map(item => `<option value="${item._id}">${escapeHtml(item.name)} | ${escapeHtml(item.brandType || "Branded")} | ${item.quantity} in stock</option>`)
+    .join("");
+  if (hint) hint.textContent = availableBrands.length
+    ? "Select the brand and quantity to move."
+    : "This medicine has no transferable stock in the selected source store.";
+}
+
+function renderTransferHistory() {
+  const container = document.getElementById("transferHistory");
+  if (!container) return;
+  if (!transfers.length) {
+    container.innerHTML = '<p class="empty">No branch transfers recorded yet.</p>';
+    return;
+  }
+
+  container.innerHTML = transfers.map(transfer => `
+    <div class="supplier-card">
+      <strong>${escapeHtml(transfer.medicine?.salt || "Medicine")} - ${escapeHtml(transfer.brand?.name || "Brand")}</strong>
+      <div class="meta">${escapeHtml(transfer.fromStore?.storeName || "Source")} to ${escapeHtml(transfer.toStore?.storeName || "Destination")} | Qty ${Number(transfer.quantity || 0)}</div>
+      <div class="meta">Batch ${escapeHtml(transfer.brand?.batchNumber || "N/A")} | Supplier ${escapeHtml(transfer.brand?.supplier || "N/A")}</div>
+      <div class="meta">Moved by ${escapeHtml(transfer.createdBy?.fullName || transfer.createdBy?.username || "Owner")} on ${formatDateTime(transfer.createdAt)}</div>
+      ${transfer.note ? `<div class="meta">Note: ${escapeHtml(transfer.note)}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+async function submitStockTransfer() {
+  if (isSubmittingTransfer) return;
+  const fromStoreId = document.getElementById("transferFromStore")?.value || "";
+  const toStoreId = document.getElementById("transferToStore")?.value || "";
+  const medicineId = document.getElementById("transferMedicine")?.value || "";
+  const brandId = document.getElementById("transferBrand")?.value || "";
+  const quantity = Number(document.getElementById("transferQuantity")?.value || 0);
+  const note = document.getElementById("transferNote")?.value.trim() || "";
+
+  if (!fromStoreId || !toStoreId) return setMessage("Select both source and destination stores.", "error");
+  if (fromStoreId === toStoreId) return setMessage("Source and destination stores must be different.", "error");
+  if (!medicineId || !brandId) return setMessage("Select a medicine and brand to transfer.", "error");
+  if (!Number.isInteger(quantity) || quantity <= 0) return setMessage("Enter a valid transfer quantity.", "error");
+
+  const choice = getTransferInventoryChoice(medicineId, brandId);
+  if (!choice) return setMessage("Selected stock item was not found.", "error");
+  if (quantity > Number(choice.brand.quantity || 0)) return setMessage("Transfer quantity is more than available stock.", "error");
+
+  try {
+    isSubmittingTransfer = true;
+    setButtonBusy("transferStockBtn", true, "Transferring...", "Transfer Stock");
+    const data = await fetchJson("/medicines/transfer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromStoreId, toStoreId, medicineId, brandId, quantity, note })
+    });
+    document.getElementById("transferQuantity").value = "1";
+    document.getElementById("transferNote").value = "";
+    setMessage(data.message || "Stock transferred successfully.", "success");
+    await loadData();
+    await handleTransferSourceChange();
+    renderTransferHistory();
+  } catch (error) {
+    setMessage(error.message, "error");
+  } finally {
+    isSubmittingTransfer = false;
+    setButtonBusy("transferStockBtn", false, "Transferring...", "Transfer Stock");
+  }
 }
 
 function renderInventory() {
@@ -1545,6 +1686,7 @@ function renderAll() {
   renderTopSelling();
   renderSuppliers();
   renderBillHistory();
+  renderTransferHistory();
   loadDropdowns();
   updateMembershipUi();
   renderCart();
@@ -1553,6 +1695,9 @@ function renderAll() {
   renderSelectedMedicineCard();
   updateFormMemoryHints();
   applyFormMemoryIfEmpty();
+  if (isOwner() && document.getElementById("transferFromStore")?.value) {
+    handleTransferSourceChange().catch(() => {});
+  }
 }
 
 wireEvents();

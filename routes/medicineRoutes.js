@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Medicine = require("../models/Medicine");
 const Store = require("../models/Store");
+const StockTransfer = require("../models/StockTransfer");
 const { requireAuth, requireOwner } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
 
@@ -52,6 +53,13 @@ function validateBrandInput(brand) {
   };
 }
 
+function sameBrandIdentity(left, right) {
+  return normalizeText(left?.name).toLowerCase() === normalizeText(right?.name).toLowerCase()
+    && (normalizeText(left?.brandType) || "Branded") === (normalizeText(right?.brandType) || "Branded")
+    && normalizeText(left?.barcode) === normalizeText(right?.barcode)
+    && normalizeText(left?.batchNumber) === normalizeText(right?.batchNumber);
+}
+
 async function resolveStoreForRequest(req) {
   const body = req.body && typeof req.body === "object" ? req.body : {};
   const query = req.query && typeof req.query === "object" ? req.query : {};
@@ -73,6 +81,165 @@ async function resolveStoreForRequest(req) {
 }
 
 router.use(requireAuth);
+
+router.get("/transfers", requireOwner, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+    const transfers = await StockTransfer.find().sort({ createdAt: -1 }).limit(limit).lean();
+    res.json({ success: true, transfers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Unable to load stock transfers" });
+  }
+});
+
+router.post("/transfer", requireOwner, async (req, res) => {
+  try {
+    const fromStoreId = normalizeText(req.body.fromStoreId);
+    const toStoreId = normalizeText(req.body.toStoreId);
+    const medicineId = normalizeText(req.body.medicineId);
+    const brandId = normalizeText(req.body.brandId);
+    const quantity = Number(req.body.quantity);
+    const note = normalizeText(req.body.note);
+
+    if (!fromStoreId || !toStoreId) {
+      return res.status(400).json({ success: false, message: "Select both source and destination stores" });
+    }
+
+    if (fromStoreId === toStoreId) {
+      return res.status(400).json({ success: false, message: "Source and destination stores must be different" });
+    }
+
+    if (!medicineId || !brandId) {
+      return res.status(400).json({ success: false, message: "Select a medicine and brand to transfer" });
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return res.status(400).json({ success: false, message: "Transfer quantity must be a positive whole number" });
+    }
+
+    const [fromStore, toStore, sourceMedicine] = await Promise.all([
+      Store.findById(fromStoreId),
+      Store.findById(toStoreId),
+      Medicine.findById(medicineId)
+    ]);
+
+    if (!fromStore || !toStore) {
+      return res.status(404).json({ success: false, message: "Selected store was not found" });
+    }
+
+    if (!sourceMedicine || String(sourceMedicine.storeId) !== fromStoreId) {
+      return res.status(404).json({ success: false, message: "Source medicine was not found in the selected store" });
+    }
+
+    const sourceBrand = sourceMedicine.brands.id(brandId);
+
+    if (!sourceBrand) {
+      return res.status(404).json({ success: false, message: "Selected brand was not found" });
+    }
+
+    if (Number(sourceBrand.quantity || 0) < quantity) {
+      return res.status(400).json({ success: false, message: "Not enough stock in the source store" });
+    }
+
+    let destinationMedicine = await Medicine.findOne({
+      salt: sourceMedicine.salt,
+      storeId: String(toStore._id)
+    });
+
+    if (!destinationMedicine) {
+      destinationMedicine = new Medicine({
+        salt: sourceMedicine.salt,
+        category: sourceMedicine.category || "General",
+        storeId: String(toStore._id),
+        storeName: toStore.name,
+        brands: []
+      });
+    }
+
+    destinationMedicine.category = sourceMedicine.category || destinationMedicine.category || "General";
+    destinationMedicine.storeName = toStore.name;
+
+    let destinationBrand = destinationMedicine.brands.find(item => sameBrandIdentity(item, sourceBrand));
+
+    if (destinationBrand) {
+      destinationBrand.quantity = Number(destinationBrand.quantity || 0) + quantity;
+      destinationBrand.price = Number(sourceBrand.price || 0);
+      destinationBrand.costPrice = Number(sourceBrand.costPrice || 0);
+      destinationBrand.supplier = sourceBrand.supplier || destinationBrand.supplier || "";
+      destinationBrand.expiryDate = sourceBrand.expiryDate || destinationBrand.expiryDate || null;
+    } else {
+      destinationMedicine.brands.push({
+        name: sourceBrand.name,
+        brandType: sourceBrand.brandType || "Branded",
+        price: Number(sourceBrand.price || 0),
+        costPrice: Number(sourceBrand.costPrice || 0),
+        quantity,
+        barcode: sourceBrand.barcode || "",
+        batchNumber: sourceBrand.batchNumber || "",
+        expiryDate: sourceBrand.expiryDate || null,
+        supplier: sourceBrand.supplier || ""
+      });
+      destinationBrand = destinationMedicine.brands[destinationMedicine.brands.length - 1];
+    }
+
+    sourceBrand.quantity = Number(sourceBrand.quantity || 0) - quantity;
+
+    await sourceMedicine.save();
+    await destinationMedicine.save();
+
+    const transfer = await StockTransfer.create({
+      fromStore: {
+        storeId: String(fromStore._id),
+        storeName: fromStore.name
+      },
+      toStore: {
+        storeId: String(toStore._id),
+        storeName: toStore.name
+      },
+      medicine: {
+        sourceMedicineId: String(sourceMedicine._id),
+        salt: sourceMedicine.salt,
+        category: sourceMedicine.category || "General"
+      },
+      brand: {
+        sourceBrandId: String(sourceBrand._id),
+        name: sourceBrand.name,
+        brandType: sourceBrand.brandType || "Branded",
+        supplier: sourceBrand.supplier || "",
+        price: Number(sourceBrand.price || 0),
+        costPrice: Number(sourceBrand.costPrice || 0),
+        barcode: sourceBrand.barcode || "",
+        batchNumber: sourceBrand.batchNumber || "",
+        expiryDate: sourceBrand.expiryDate || null
+      },
+      quantity,
+      note,
+      createdBy: {
+        userId: req.user.id,
+        username: req.user.username || "",
+        fullName: req.user.fullName || ""
+      }
+    });
+
+    await recordAudit(req, "medicine.transfer-stock", "stock-transfer", transfer._id, {
+      fromStoreId: String(fromStore._id),
+      fromStoreName: fromStore.name,
+      toStoreId: String(toStore._id),
+      toStoreName: toStore.name,
+      salt: sourceMedicine.salt,
+      brandName: sourceBrand.name,
+      quantity
+    });
+
+    res.json({
+      success: true,
+      message: `Transferred ${quantity} units of ${sourceBrand.name} to ${toStore.name}`,
+      transfer
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Unable to transfer stock" });
+  }
+});
 
 // ADD BRAND
 router.post("/", requireOwner, async (req, res) => {

@@ -160,6 +160,32 @@
             </div>
           <div id="storeList" class="supplier-list" style="margin-top:16px;"></div>
         </div>
+
+        <div class="panel owner-only" id="transferPanel" hidden>
+          <h2 class="section-title">Branch Stock Transfer</h2>
+          <p class="section-subtitle">Move inventory between branches with a clean audit trail and transfer history.</p>
+          <div class="grid-3">
+            <div class="field"><label for="transferFromStore">From Store</label><select id="transferFromStore" onchange="handleTransferSourceChange()"></select></div>
+            <div class="field"><label for="transferToStore">To Store</label><select id="transferToStore"></select></div>
+            <div class="field"><label for="transferQuantity">Quantity</label><input id="transferQuantity" type="number" min="1" step="1" value="1"></div>
+          </div>
+          <div class="grid-3" style="margin-top:14px;">
+            <div class="field"><label for="transferMedicine">Medicine</label><select id="transferMedicine" onchange="loadTransferBrands()"></select></div>
+            <div class="field"><label for="transferBrand">Brand</label><select id="transferBrand"></select></div>
+            <div class="field"><label for="transferNote">Transfer Note</label><input id="transferNote" placeholder="Optional note for head office"></div>
+          </div>
+          <div id="transferStockHint" class="status-line" style="margin-top:14px;">Choose a source store to load available stock for transfer.</div>
+          <div class="actions-row" style="margin-top:14px;">
+            <button class="btn btn-primary" id="transferStockBtn" onclick="submitStockTransfer()">Transfer Stock</button>
+          </div>
+          <div class="subpanel">
+            <div class="subpanel-head">
+              <h3>Recent Transfers</h3>
+              <button class="mini-link" onclick="renderTransferHistory()">Refresh</button>
+            </div>
+            <div id="transferHistory" class="supplier-list"></div>
+          </div>
+        </div>
       </div>
 
       <div class="stack">

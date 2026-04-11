@@ -235,7 +235,7 @@
         localStorage.clear();
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
-        window.location.href = "app.html";
+        window.location.replace(`app.html?v=${Date.now()}`);
       } catch (error) {
         message.innerText = isWebOrigin
           ? "Server is not reachable. Start the backend and open the app from that same server address."

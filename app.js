@@ -1,3 +1,9 @@
+window.addEventListener("pageshow", event => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 const URL = ensureApiBaseUrl();
 const LOW_STOCK_LIMIT = 5;
 const NEAR_EXPIRY_DAYS = 45;
@@ -22,7 +28,7 @@ let isCreatingStaff = false;
 let isLookingUpCustomer = false;
 let isSavingMember = false;
 
-if (!localStorage.getItem("token")) window.location.href = "index.html";
+if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
 function getToken() {
   return localStorage.getItem("token") || "";
@@ -45,7 +51,7 @@ async function fetchJson(path, options = {}) {
   const data = await response.json().catch(() => ({}));
   if (response.status === 401) {
     localStorage.clear();
-    window.location.href = "index.html";
+    window.location.replace(`index.html?t=${Date.now()}`);
     throw new Error("Session expired");
   }
   if (!response.ok) throw new Error(data.message || "Request failed");
@@ -1424,7 +1430,7 @@ async function logout() {
     await fetchJson("/users/logout", { method: "POST" });
   } catch (error) {}
   localStorage.clear();
-  window.location.href = "index.html";
+  window.location.replace(`index.html?t=${Date.now()}`);
 }
 
 function filterInventoryBySupplier(supplier) {

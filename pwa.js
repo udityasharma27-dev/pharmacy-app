@@ -30,30 +30,14 @@ window.installPharmacyApp = installPharmacyApp;
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then(registration => {
-      if (registration.waiting) {
-        registration.waiting.postMessage({ type: "SKIP_WAITING" });
-      }
+    navigator.serviceWorker.getRegistrations()
+      .then(registrations => Promise.all(registrations.map(registration => registration.unregister())))
+      .catch(() => {});
 
-      registration.addEventListener("updatefound", () => {
-        const installingWorker = registration.installing;
-        if (!installingWorker) return;
-        installingWorker.addEventListener("statechange", () => {
-          if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-            installingWorker.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      });
-
-      setInterval(() => {
-        registration.update().catch(() => {});
-      }, 60000);
-    }).catch(() => {});
-  });
-
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (window.__pharmacySwRefreshing) return;
-    window.__pharmacySwRefreshing = true;
-    window.location.reload();
+    if ("caches" in window) {
+      caches.keys()
+        .then(keys => Promise.all(keys.map(key => caches.delete(key))))
+        .catch(() => {});
+    }
   });
 }

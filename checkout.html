@@ -119,6 +119,10 @@
 
   <script src="api-base.js"></script>
   <script>
+    window.addEventListener("pageshow", event => {
+      if(event.persisted)window.location.reload();
+    });
+
     const URL=ensureApiBaseUrl();
     const cart=JSON.parse(localStorage.getItem("pendingCheckoutCart")||"[]");
     const customer=JSON.parse(localStorage.getItem("pendingCustomer")||"null");
@@ -126,13 +130,13 @@
     let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
     let pollTimer=null;
     let isFinalizingPayment=false;
-    if(!localStorage.getItem("token"))window.location.href="index.html";
+    if(!localStorage.getItem("token"))window.location.replace(`index.html?t=${Date.now()}`);
 
     function getToken(){return localStorage.getItem("token")||""}
 
     function setMessage(text,type=""){message.className="message";message.textContent=text||"";if(!text){message.style.display="none";return}message.classList.add(type||"success");message.style.display="block"}
     function authHeaders(extra={}){return{...extra,Authorization:"Bearer "+getToken()}}
-    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.href="index.html";throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
+    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.replace(`index.html?t=${Date.now()}`);throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
     const formatAmount=v=>"Rs "+Number(v||0).toFixed(2);
     function setPaymentActionState(isBusy){
       isFinalizingPayment=isBusy;
@@ -233,7 +237,7 @@
         setMessage("Payment confirmed. Bill created for "+formatAmount(data.totalAmount)+".","success");
         updateStatusBox("BILLED");
         clearInterval(pollTimer);
-        setTimeout(()=>{window.location.href="app.html"},1400);
+        setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1400);
       }catch(error){setMessage(error.message,"error");if(!wasAlreadyBusy)setPaymentActionState(false);}
       }
 
@@ -256,7 +260,7 @@
           localStorage.removeItem("paymentMethod");
           localStorage.removeItem("pendingCustomer");
           setMessage("Bill was already created for this payment.","success");
-          setTimeout(()=>{window.location.href="app.html"},1200);
+          setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1200);
         }else{
           setMessage("UPI payment is still pending. Confirm only after the payment arrives.","error");
         }
@@ -304,7 +308,7 @@
       },7000);
     }
 
-    function backToApp(){window.location.href="app.html"}
+    function backToApp(){window.location.replace(`app.html?v=${Date.now()}`)}
 
     (async function init(){
       renderOrder();

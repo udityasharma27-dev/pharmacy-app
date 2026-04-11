@@ -8,6 +8,20 @@ const { recordAudit } = require("../utils/audit");
 
 router.use(requireAuth);
 
+async function buildInvoiceNumber() {
+  const now = new Date();
+  const monthCode = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const prefix = `LVP-${monthCode}-`;
+  const latestBill = await Bill.findOne({
+    invoiceNumber: { $regex: `^${prefix}` }
+  }).sort({ createdAt: -1, _id: -1 }).lean();
+  const latestSequence = latestBill?.invoiceNumber
+    ? Number(String(latestBill.invoiceNumber).split("-").pop())
+    : 0;
+  const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1;
+  return `${prefix}${String(nextSequence).padStart(4, "0")}`;
+}
+
 router.post("/", async (req, res) => {
   try {
     const paymentSessionId = String(req.body.paymentSessionId || "").trim();
@@ -38,7 +52,8 @@ router.post("/", async (req, res) => {
         discountAmount: existingBill?.discountAmount || paymentSession.discountAmount || 0,
         totalAmount: existingBill?.totalAmount || paymentSession.totalAmount,
         totalProfit: existingBill?.totalProfit || 0,
-        billId: paymentSession.billId
+        billId: paymentSession.billId,
+        invoiceNumber: existingBill?.invoiceNumber || ""
       });
     }
 
@@ -118,6 +133,7 @@ router.post("/", async (req, res) => {
 
     const discountAmount = Number(paymentSession.discountAmount || 0);
     const total = Math.max(0, subtotal - discountAmount);
+    const invoiceNumber = await buildInvoiceNumber();
 
     const bill = new Bill({
       items: billItems,
@@ -132,6 +148,7 @@ router.post("/", async (req, res) => {
       discountAmount,
       totalAmount: total,
       totalProfit,
+      invoiceNumber,
       paymentReference: paymentSession.paymentReference,
       paymentStatus: "PAID"
     });
@@ -150,7 +167,7 @@ router.post("/", async (req, res) => {
       itemCount: bill.items.length
     });
 
-    res.json({ success: true, totalAmount: total, totalProfit, billId: bill._id });
+    res.json({ success: true, totalAmount: total, totalProfit, billId: bill._id, invoiceNumber: bill.invoiceNumber });
   } catch (err) {
     res.status(500).json({ success: false, message: "Unable to create bill" });
   }

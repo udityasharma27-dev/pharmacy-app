@@ -61,6 +61,10 @@ const billSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  invoiceNumber: {
+    type: String,
+    default: ""
+  },
   paymentStatus: {
     type: String,
     default: "PAID"

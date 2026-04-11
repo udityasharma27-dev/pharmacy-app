@@ -28,6 +28,8 @@ let isCreatingStore = false;
 let isCreatingStaff = false;
 let isLookingUpCustomer = false;
 let isSavingMember = false;
+let isRefreshingData = false;
+let refreshTimer = null;
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -66,6 +68,7 @@ async function fetchJson(path, options = {}) {
 const formatAmount = value => "Rs " + Number(value || 0).toFixed(2);
 const formatDate = value => value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "N/A";
 const formatDateTime = value => new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const formatInvoiceNumber = bill => bill?.invoiceNumber || `INV-${String(bill?._id || "").slice(-6).toUpperCase()}`;
 const saveCart = () => localStorage.setItem("pharmacyCart", JSON.stringify(cart));
 const saveCustomer = () => localStorage.setItem("selectedCustomer", JSON.stringify(selectedCustomer));
 const isOwner = () => currentUser?.role === "owner";
@@ -205,7 +208,9 @@ async function loadCurrentUser() {
 }
 
 async function loadData() {
+  if (isRefreshingData) return;
   try {
+    isRefreshingData = true;
     await loadCurrentUser();
     const [storeResult, userResult] = await Promise.allSettled([
       fetchJson("/stores"),
@@ -256,6 +261,8 @@ async function loadData() {
   } catch (error) {
     document.getElementById("roleLabel").textContent = localStorage.getItem("role") || "Sign in again";
     setMessage(error.message, "error");
+  } finally {
+    isRefreshingData = false;
   }
 }
 
@@ -559,7 +566,7 @@ function renderBillHistory() {
     return;
   }
 
-  bills.forEach((bill, index) => {
+  bills.forEach(bill => {
     const items = (bill.items || []).map(item => `
       <div>${escapeHtml(item.name)} x ${item.quantity} = ${formatAmount(item.total)} | Profit ${formatAmount((Number(item.price) - Number(item.costPrice || 0)) * Number(item.quantity || 0))}</div>
     `).join("");
@@ -568,7 +575,7 @@ function renderBillHistory() {
       <div class="bill-card">
         <div class="bill-top">
           <div>
-            <h4>Bill #${bills.length - index}</h4>
+            <h4>${escapeHtml(formatInvoiceNumber(bill))}</h4>
             <div class="meta">${formatDateTime(bill.createdAt)}</div>
             <div class="meta">${bill.customer?.phone ? `Customer ${escapeHtml(bill.customer.name || "Walk-in")} | ${escapeHtml(bill.customer.phone)}${bill.customer.isMember ? " | Member" : ""}` : "Walk-in customer"}</div>
             <div class="meta">Handled by ${escapeHtml(bill.createdBy?.fullName || bill.createdBy?.username || "Staff")}</div>
@@ -1398,7 +1405,7 @@ function printInvoice(billId) {
   win.document.write(`
     <html>
       <head>
-        <title>Invoice ${bill._id}</title>
+        <title>Invoice ${formatInvoiceNumber(bill)}</title>
         <style>
           body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}
           .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
@@ -1413,7 +1420,8 @@ function printInvoice(billId) {
           <div>
             <h1>Lumière de Vie Pharma Invoice</h1>
             <p>Bill Date: ${formatDateTime(bill.createdAt)}</p>
-            <p>Invoice ID: ${bill._id}</p>
+            <p>Invoice No: ${formatInvoiceNumber(bill)}</p>
+            <p>Bill ID: ${bill._id}</p>
           </div>
           <div class="badge">Printable Copy</div>
         </div>
@@ -1441,8 +1449,18 @@ async function logout() {
   try {
     await fetchJson("/users/logout", { method: "POST" });
   } catch (error) {}
+  clearInterval(refreshTimer);
   localStorage.clear();
   window.location.replace(`index.html?t=${Date.now()}`);
+}
+
+function startAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    if (!document.hidden && localStorage.getItem("token")) {
+      loadData().catch(() => {});
+    }
+  }, 30000);
 }
 
 function filterInventoryBySupplier(supplier) {
@@ -1529,3 +1547,9 @@ function renderAll() {
 wireEvents();
 setQuickQuantity(1);
 loadData();
+startAutoRefresh();
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && localStorage.getItem("token")) {
+    loadData().catch(() => {});
+  }
+});

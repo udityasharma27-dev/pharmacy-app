@@ -560,13 +560,14 @@ function renderTopSelling() {
 
 function renderBillHistory() {
   const container = document.getElementById("billHistory");
+  const historyBills = isOwner() ? allBills : bills;
   container.innerHTML = "";
-  if (!bills.length) {
+  if (!historyBills.length) {
     container.innerHTML = '<p class="empty">No bills created yet.</p>';
     return;
   }
 
-  bills.forEach(bill => {
+  historyBills.forEach(bill => {
     const items = (bill.items || []).map(item => `
       <div>${escapeHtml(item.name)} x ${item.quantity} = ${formatAmount(item.total)} | Profit ${formatAmount((Number(item.price) - Number(item.costPrice || 0)) * Number(item.quantity || 0))}</div>
     `).join("");

@@ -2,7 +2,6 @@ const URL = ensureApiBaseUrl();
 const LOW_STOCK_LIMIT = 5;
 const NEAR_EXPIRY_DAYS = 45;
 const EXPIRY_SOON_DAYS = 30;
-const token = localStorage.getItem("token");
 
 let currentUser = null;
 let teamProfiles = [];
@@ -17,8 +16,13 @@ let selectedBillingChoice = null;
 let recentBillingItems = JSON.parse(localStorage.getItem("recentBillingItems") || "[]");
 let quickQuantityValue = 1;
 let formMemory = JSON.parse(localStorage.getItem("inventoryFormMemory") || '{"supplier":"","category":""}');
+let isSavingMedicine = false;
 
-if (!token) window.location.href = "index.html";
+if (!localStorage.getItem("token")) window.location.href = "index.html";
+
+function getToken() {
+  return localStorage.getItem("token") || "";
+}
 
 function setMessage(text, type = "") {
   const box = document.getElementById("message");
@@ -29,7 +33,7 @@ function setMessage(text, type = "") {
 }
 
 function authHeaders(extra = {}) {
-  return { ...extra, Authorization: "Bearer " + token };
+  return { ...extra, Authorization: "Bearer " + getToken() };
 }
 
 async function fetchJson(path, options = {}) {
@@ -144,6 +148,19 @@ function applyFormMemoryIfEmpty() {
   if (categoryInput && !categoryInput.value && formMemory.category) categoryInput.value = formMemory.category;
 }
 
+function setMedicineSaveState(isSaving) {
+  const addBtn = document.getElementById("addMedicineBtn");
+  const keepOpenBtn = document.getElementById("addMedicineKeepOpenBtn");
+  if (addBtn) {
+    addBtn.disabled = isSaving;
+    addBtn.textContent = isSaving ? "Saving..." : "Add Medicine";
+  }
+  if (keepOpenBtn) {
+    keepOpenBtn.disabled = isSaving;
+    keepOpenBtn.textContent = isSaving ? "Saving..." : "Save & Add Another";
+  }
+}
+
 async function loadCurrentUser() {
   const data = await fetchJson("/users/me");
   currentUser = data.user;
@@ -170,23 +187,36 @@ async function loadCurrentUser() {
 async function loadData() {
   try {
     await loadCurrentUser();
+    const [storeResult, userResult] = await Promise.allSettled([
+      fetchJson("/stores"),
+      isOwner() ? fetchJson("/users") : Promise.resolve({ users: currentUser ? [currentUser] : [] })
+    ]);
+    stores = storeResult.status === "fulfilled" && Array.isArray(storeResult.value?.stores) ? storeResult.value.stores : [];
+    teamProfiles = userResult.status === "fulfilled" && Array.isArray(userResult.value?.users) && userResult.value.users.length
+      ? userResult.value.users
+      : currentUser ? [currentUser] : [];
+
+    // If the selected store no longer exists in the current database, clear it so
+    // inventory requests and new stock entries don't keep targeting a dead store id.
+    if (isOwner() && activeStoreId && !stores.some(store => String(store._id) === String(activeStoreId))) {
+      activeStoreId = "";
+      localStorage.removeItem("activeStoreId");
+    }
+
+    if (isOwner() && !activeStoreId && stores.length === 1) {
+      activeStoreId = String(stores[0]._id);
+      localStorage.setItem("activeStoreId", activeStoreId);
+    }
+
     const query = activeStoreId ? `?storeId=${encodeURIComponent(activeStoreId)}` : "";
     const [medicineData, billData] = await Promise.all([
       fetchJson(`/medicines${query}`),
       fetchJson(`/bills${query}`)
     ]);
 
-    const [storeResult, userResult] = await Promise.allSettled([
-      fetchJson("/stores"),
-      isOwner() ? fetchJson("/users") : Promise.resolve({ users: currentUser ? [currentUser] : [] })
-    ]);
-
     medicines = Array.isArray(medicineData) ? medicineData : [];
     bills = Array.isArray(billData) ? billData : [];
-    stores = storeResult.status === "fulfilled" && Array.isArray(storeResult.value?.stores) ? storeResult.value.stores : [];
-    teamProfiles = userResult.status === "fulfilled" && Array.isArray(userResult.value?.users) && userResult.value.users.length
-      ? userResult.value.users
-      : currentUser ? [currentUser] : [];
+
     if (selectedBillingChoice) selectedBillingChoice = getChoiceByIds(selectedBillingChoice.medicineId, selectedBillingChoice.brandId);
 
     if (storeResult.status === "rejected" || userResult.status === "rejected") {
@@ -1167,16 +1197,23 @@ async function creditSalary(userId, label) {
 }
 
 async function addMedicine(keepOpen = false) {
+  if (isSavingMedicine) return;
   const payload = formPayload("");
   if (!payload.salt || !payload.name) return setMessage("Salt and brand name are required.", "error");
   if ([payload.price, payload.costPrice, payload.quantity].some(value => !Number.isFinite(value) || value < 0)) {
     return setMessage("Price, cost, and quantity must be valid non-negative numbers.", "error");
+  }
+  if (isOwner() && !activeStoreId && stores.length === 1) {
+    activeStoreId = String(stores[0]._id);
+    localStorage.setItem("activeStoreId", activeStoreId);
   }
   if (isOwner() && stores.length && !activeStoreId) {
     return setMessage("Select a store first so the stock goes into the correct branch inventory.", "error");
   }
 
   try {
+    isSavingMedicine = true;
+    setMedicineSaveState(true);
     await fetchJson("/medicines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1195,15 +1232,31 @@ async function addMedicine(keepOpen = false) {
           batchNumber: payload.batchNumber,
           expiryDate: payload.expiryDate || null
         }
-      })
-    });
+        })
+      });
     storeFormMemory({ category: payload.category || "General", supplier: payload.supplier });
     clearInventoryForm(keepOpen);
-    setMessage(keepOpen ? "Medicine saved. Form is ready for the next entry." : "Medicine added successfully.", "success");
+    const storeLabel = stores.find(store => String(store._id) === String(activeStoreId))?.name || "current store";
+    setMessage(
+      keepOpen
+        ? `${payload.name} saved under ${payload.salt} in ${storeLabel}. Form is ready for the next entry.`
+        : `${payload.name} saved under ${payload.salt} in ${storeLabel}.`,
+      "success"
+    );
     await loadData();
-    if (keepOpen) document.getElementById("saltInput").focus();
+    document.getElementById("stockFilter").value = "all";
+    document.getElementById("searchInput").value = payload.salt;
+    renderInventory();
+    if (keepOpen) {
+      document.getElementById("saltInput").focus();
+      } else {
+        document.getElementById("inventoryList").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
   } catch (error) {
     setMessage(error.message, "error");
+  } finally {
+    isSavingMedicine = false;
+    setMedicineSaveState(false);
   }
 }
 

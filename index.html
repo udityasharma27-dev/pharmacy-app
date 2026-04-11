@@ -221,6 +221,7 @@
           return;
         }
 
+        localStorage.clear();
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
         window.location.href = "app.html";

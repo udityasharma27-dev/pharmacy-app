@@ -1,5 +1,5 @@
 (function () {
-  const PUBLIC_API_BASE = "https://lumiere-de-vie-pharma-miwa.onrender.com";
+  const PUBLIC_API_BASE = "https://lumiere-de-vie-pharma-qhh0.onrender.com";
 
   function normalizeBase(url) {
     return String(url || "").trim().replace(/\/+$/, "");

@@ -15,6 +15,7 @@ let stores = [];
 let activeStoreId = localStorage.getItem("activeStoreId") || "";
 let medicines = [];
 let bills = [];
+let allBills = [];
 let cart = JSON.parse(localStorage.getItem("pharmacyCart") || "[]");
 let editState = null;
 let selectedCustomer = JSON.parse(localStorage.getItem("selectedCustomer") || "null");
@@ -228,13 +229,19 @@ async function loadData() {
     }
 
     const query = activeStoreId ? `?storeId=${encodeURIComponent(activeStoreId)}` : "";
-    const [medicineData, billData] = await Promise.all([
+    const billRequests = isOwner()
+      ? [fetchJson(`/bills${query}`), fetchJson("/bills")]
+      : [fetchJson(`/bills${query}`)];
+    const [medicineData, ...billResults] = await Promise.all([
       fetchJson(`/medicines${query}`),
-      fetchJson(`/bills${query}`)
+      ...billRequests
     ]);
 
     medicines = Array.isArray(medicineData) ? medicineData : [];
-    bills = Array.isArray(billData) ? billData : [];
+    bills = Array.isArray(billResults[0]) ? billResults[0] : [];
+    allBills = isOwner()
+      ? (Array.isArray(billResults[1]) ? billResults[1] : bills)
+      : bills;
 
     if (selectedBillingChoice) selectedBillingChoice = getChoiceByIds(selectedBillingChoice.medicineId, selectedBillingChoice.brandId);
 
@@ -280,16 +287,17 @@ function getVisibleMedicines() {
 }
 
 function updateStats() {
+  const statsBills = isOwner() ? allBills : bills;
   const brandCount = medicines.reduce((sum, medicine) => sum + (medicine.brands || []).length, 0);
   const alertCount = medicines.reduce((sum, medicine) => sum + (medicine.brands || []).filter(brand => alertState(brand).level !== "healthy").length, 0);
-  const revenue = bills.reduce((sum, bill) => sum + Number(bill.totalAmount || 0), 0);
-  const profit = bills.reduce((sum, bill) => sum + Number(bill.totalProfit || 0), 0);
+  const revenue = statsBills.reduce((sum, bill) => sum + Number(bill.totalAmount || 0), 0);
+  const profit = statsBills.reduce((sum, bill) => sum + Number(bill.totalProfit || 0), 0);
   const lowStockCount = medicines.reduce((sum, medicine) => sum + (medicine.brands || []).filter(brand => alertState(brand).level === "low-stock").length, 0);
   const expirySoonCount = medicines.reduce((sum, medicine) => sum + (medicine.brands || []).filter(brand => {
     const days = daysUntil(brand.expiryDate);
     return days !== null && days >= 0 && days <= EXPIRY_SOON_DAYS;
   }).length, 0);
-  const todaysBills = bills.filter(bill => isToday(bill.createdAt));
+  const todaysBills = statsBills.filter(bill => isToday(bill.createdAt));
   const todaysRevenue = todaysBills.reduce((sum, bill) => sum + Number(bill.totalAmount || 0), 0);
 
   document.getElementById("totalMedicineCount").textContent = String(medicines.length);

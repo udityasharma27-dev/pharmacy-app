@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Customer = require("../models/Customer");
-const { requireAuth, requireOwner } = require("../middleware/auth");
+const { requireAuth } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
 
 function normalizePhone(phone) {
@@ -31,7 +31,7 @@ router.get("/lookup/:phone", async (req, res) => {
   }
 });
 
-router.post("/", requireOwner, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const phone = normalizePhone(req.body.phone);
     const name = String(req.body.name || "").trim();

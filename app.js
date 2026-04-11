@@ -185,10 +185,8 @@ async function loadCurrentUser() {
   document.getElementById("ownerPanel").hidden = !isOwner();
   const staffCreatePanel = document.getElementById("staffCreatePanel");
   const storePanel = document.getElementById("storePanel");
-  const saveMemberBtn = document.getElementById("saveMemberBtn");
   const storeSwitcherWrap = document.getElementById("storeSwitcherWrap");
   const addStockQuickAction = document.getElementById("addStockQuickAction");
-  if (saveMemberBtn) saveMemberBtn.hidden = !isOwner();
   if (staffCreatePanel) staffCreatePanel.hidden = !isOwner();
   if (storePanel) storePanel.hidden = !isOwner();
   if (storeSwitcherWrap) storeSwitcherWrap.hidden = !isOwner();

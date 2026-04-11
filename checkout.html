@@ -217,8 +217,8 @@
     }
 
     async function generateBill(){
-      if(isFinalizingPayment)return;
-      setPaymentActionState(true);
+      const wasAlreadyBusy=isFinalizingPayment;
+      if(!wasAlreadyBusy)setPaymentActionState(true);
       try{
         const data=await fetchJson("/bills",{
           method:"POST",
@@ -234,7 +234,7 @@
         updateStatusBox("BILLED");
         clearInterval(pollTimer);
         setTimeout(()=>{window.location.href="app.html"},1400);
-      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+      }catch(error){setMessage(error.message,"error");if(!wasAlreadyBusy)setPaymentActionState(false);}
       }
 
     async function checkPaymentStatus(){

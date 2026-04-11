@@ -47,7 +47,11 @@ function authHeaders(extra = {}) {
 }
 
 async function fetchJson(path, options = {}) {
-  const response = await fetch(URL + path, { ...options, headers: authHeaders(options.headers || {}) });
+  const response = await fetch(URL + path, {
+    ...options,
+    cache: "no-store",
+    headers: authHeaders(options.headers || {})
+  });
   const data = await response.json().catch(() => ({}));
   if (response.status === 401) {
     localStorage.clear();

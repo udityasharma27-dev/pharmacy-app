@@ -136,7 +136,7 @@
 
     function setMessage(text,type=""){message.className="message";message.textContent=text||"";if(!text){message.style.display="none";return}message.classList.add(type||"success");message.style.display="block"}
     function authHeaders(extra={}){return{...extra,Authorization:"Bearer "+getToken()}}
-    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.replace(`index.html?t=${Date.now()}`);throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
+    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,cache:"no-store",headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.replace(`index.html?t=${Date.now()}`);throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
     const formatAmount=v=>"Rs "+Number(v||0).toFixed(2);
     function setPaymentActionState(isBusy){
       isFinalizingPayment=isBusy;

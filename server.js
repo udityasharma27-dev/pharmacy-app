@@ -33,6 +33,21 @@ app.use(express.static(__dirname, {
   }
 }));
 
+app.use((req, res, next) => {
+  if (req.path.startsWith("/users")
+    || req.path.startsWith("/medicines")
+    || req.path.startsWith("/bills")
+    || req.path.startsWith("/payments")
+    || req.path.startsWith("/customers")
+    || req.path.startsWith("/stores")
+    || req.path.startsWith("/admin")) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+  next();
+});
+
 // ROUTES
 const userRoutes = require("./routes/userRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");

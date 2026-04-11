@@ -221,6 +221,7 @@
         setLoginBusy(true);
         const res = await fetch(apiBase + "/users/login", {
           method: "POST",
+          cache: "no-store",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });

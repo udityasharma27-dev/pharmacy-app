@@ -560,11 +560,21 @@ function renderTopSelling() {
 
 function renderBillHistory() {
   const container = document.getElementById("billHistory");
-  const historyBills = isOwner() ? allBills : bills;
+  const historyBills = isOwner() ? (allBills.length ? allBills : bills) : bills;
   container.innerHTML = "";
   if (!historyBills.length) {
     container.innerHTML = '<p class="empty">No bills created yet.</p>';
     return;
+  }
+
+  if (isOwner()) {
+    const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
+    container.innerHTML = `
+      <div class="history-mini">
+        <p>Owner bill history shows all branch bills by default.</p>
+        <p>All branch bills: ${historyBills.length} | Current store filter: ${activeStore?.name || "All Stores"} | Filtered bills: ${bills.length}</p>
+      </div>
+    `;
   }
 
   historyBills.forEach(bill => {

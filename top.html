@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Top Selling</title>
+</head>
+<body>
+
+<h2>Top 3 Medicines</h2>
+<button onclick="loadTop()">Load</button>
+
+<div id="list"></div>
+
+<script>
+const URL="http://localhost:5000";
+
+async function loadTop(){
+  const res=await fetch(URL+"/top");
+  const data=await res.json();
+
+  list.innerHTML="";
+
+  data.forEach((m,i)=>{
+    list.innerHTML+=`
+      <div>
+        <h3>#${i+1} ${m[0]}</h3>
+        <p>Sold: ${m[1]}</p>
+      </div>
+    `;
+  });
+}
+</script>
+
+</body>
+</html>

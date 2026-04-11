@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: lumiere-de-vie-pharma
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: MONGO_URI
+        sync: false
+      - key: OWNER_USERNAME
+        value: admin
+      - key: OWNER_PASSWORD
+        value: 123
+      - key: STAFF_USERNAME
+        value: staff
+      - key: STAFF_PASSWORD
+        value: 123

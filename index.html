@@ -175,21 +175,12 @@
         <input id="pass" type="password" placeholder="Enter password">
       </div>
 
-      <div class="field">
-        <label for="apiBase">Server URL</label>
-        <input id="apiBase" placeholder="http://192.168.1.10:5000">
-        <small>For the APK, enter the backend URL or your computer IP with port `5000`.</small>
-      </div>
-
       <button onclick="login()">Login To Dashboard</button>
       <p id="message" class="message"></p>
       <div class="install">
         <button type="button" data-install-app hidden onclick="installPharmacyApp()">Install On Phone</button>
       </div>
 
-      <div class="helper">
-        <strong>Default users:</strong> `admin / 123` and `staff / 123`
-      </div>
     </section>
   </div>
 
@@ -197,22 +188,17 @@
   <script>
     const URL = getApiBaseUrl();
     const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
-    document.getElementById("apiBase").value = URL;
-    if (isWebOrigin) {
-      document.getElementById("apiBase").disabled = true;
-      document.getElementById("apiBase").title = "Web version uses the same server it was opened from.";
-    }
 
     async function login() {
       const username = document.getElementById("user").value.trim();
       const password = document.getElementById("pass").value;
-      const apiBase = isWebOrigin ? getApiBaseUrl() : saveApiBaseUrl(document.getElementById("apiBase").value);
+      const apiBase = getApiBaseUrl();
       const message = document.getElementById("message");
 
       message.innerText = "";
 
       if (!apiBase) {
-        message.innerText = "Enter the server URL first.";
+        message.innerText = "Server configuration is missing.";
         return;
       }
 
@@ -241,7 +227,7 @@
       } catch (error) {
         message.innerText = isWebOrigin
           ? "Server is not reachable. Start the backend and open the app from that same server address."
-          : "Server is not reachable.";
+          : "Server is not reachable. Check that the live backend is running.";
       }
     }
   </script>

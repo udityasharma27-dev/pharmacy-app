@@ -5,6 +5,7 @@ const Bill = require("../models/Bill");
 const Store = require("../models/Store");
 const { createToken, hashPassword, verifyPassword, verifyToken } = require("../utils/auth");
 const { requireAuth, requireOwner } = require("../middleware/auth");
+const { recordAudit } = require("../utils/audit");
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const loginAttempts = new Map();
@@ -275,6 +276,13 @@ router.post("/", requireOwner, async (req, res) => {
       monthlyPatientThreshold,
       bonusPerExtraPatient,
       joiningDate: req.body.joiningDate ? new Date(req.body.joiningDate) : new Date()
+    });
+
+    await recordAudit(req, "user.create", "user", user._id, {
+      username: user.username,
+      role: user.role,
+      storeId: user.storeId,
+      storeName: user.storeName
     });
 
     res.json({

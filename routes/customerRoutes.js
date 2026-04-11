@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Customer = require("../models/Customer");
 const { requireAuth, requireOwner } = require("../middleware/auth");
+const { recordAudit } = require("../utils/audit");
 
 function normalizePhone(phone) {
   return String(phone || "").replace(/\D/g, "").trim();
@@ -46,11 +47,18 @@ router.post("/", requireOwner, async (req, res) => {
       return res.status(400).json({ success: false, message: "Discount percent must be between 0 and 100" });
     }
 
+    const existing = await Customer.findOne({ phone }).lean();
     const customer = await Customer.findOneAndUpdate(
       { phone },
       { phone, name, notes, isMember, membershipDiscountPercent },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+
+    await recordAudit(req, existing ? "customer.update" : "customer.create", "customer", customer._id, {
+      phone: customer.phone,
+      isMember: customer.isMember,
+      membershipDiscountPercent: customer.membershipDiscountPercent
+    });
 
     res.json({ success: true, customer });
   } catch (error) {

@@ -4,6 +4,7 @@ const Medicine = require("../models/Medicine");
 const Bill = require("../models/Bill");
 const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
+const { recordAudit } = require("../utils/audit");
 
 router.use(requireAuth);
 
@@ -140,6 +141,14 @@ router.post("/", async (req, res) => {
     paymentSession.status = "BILLED";
     paymentSession.billId = bill._id;
     await paymentSession.save();
+
+    await recordAudit(req, "bill.create", "bill", bill._id, {
+      totalAmount: bill.totalAmount,
+      totalProfit: bill.totalProfit,
+      storeId: bill.store?.storeId || "",
+      storeName: bill.store?.storeName || "",
+      itemCount: bill.items.length
+    });
 
     res.json({ success: true, totalAmount: total, totalProfit, billId: bill._id });
   } catch (err) {

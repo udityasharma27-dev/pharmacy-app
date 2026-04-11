@@ -32,6 +32,7 @@ const billRoutes = require("./routes/billRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const storeRoutes = require("./routes/storeRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 app.use("/users", userRoutes);
 app.use("/medicines", medicineRoutes);
@@ -39,6 +40,7 @@ app.use("/bills", billRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/customers", customerRoutes);
 app.use("/stores", storeRoutes);
+app.use("/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");

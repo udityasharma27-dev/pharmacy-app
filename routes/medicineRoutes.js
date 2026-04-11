@@ -3,6 +3,7 @@ const router = express.Router();
 const Medicine = require("../models/Medicine");
 const Store = require("../models/Store");
 const { requireAuth, requireOwner } = require("../middleware/auth");
+const { recordAudit } = require("../utils/audit");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -94,6 +95,7 @@ router.post("/", requireOwner, async (req, res) => {
     }
 
     let med = await Medicine.findOne({ salt, storeId: store.storeId });
+    const isNewMedicine = !med;
 
     if (!med) {
       med = new Medicine({ salt, category, storeId: store.storeId, storeName: store.storeName, brands: [brand] });
@@ -116,6 +118,13 @@ router.post("/", requireOwner, async (req, res) => {
     }
 
     await med.save();
+    await recordAudit(req, isNewMedicine ? "medicine.create" : "medicine.add-brand", "medicine", med._id, {
+      salt: med.salt,
+      storeId: med.storeId,
+      storeName: med.storeName,
+      brandName: brand.name,
+      brandType: brand.brandType
+    });
     res.json({ success: true, message: "Medicine added" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Unable to add medicine" });
@@ -165,6 +174,13 @@ router.put("/:id/:brandId", requireOwner, async (req, res) => {
     brand.quantity += quantity;
 
     await med.save();
+    await recordAudit(req, "medicine.adjust-stock", "medicine", med._id, {
+      salt: med.salt,
+      brandId: brand._id,
+      brandName: brand.name,
+      delta: quantity,
+      quantity: brand.quantity
+    });
     res.json({ success: true, message: "Stock updated" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Unable to update stock" });
@@ -211,6 +227,11 @@ router.patch("/:id/:brandId", requireOwner, async (req, res) => {
     brand.expiryDate = value.expiryDate;
 
     await med.save();
+    await recordAudit(req, "medicine.update-brand", "medicine", med._id, {
+      salt: med.salt,
+      brandId: brand._id,
+      brandName: brand.name
+    });
     res.json({ success: true, message: "Brand updated" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Unable to update brand" });
@@ -232,8 +253,14 @@ router.delete("/:id/:brandId", requireOwner, async (req, res) => {
       return res.status(404).json({ success: false, message: "Brand not found" });
     }
 
+    const brandName = brand.name;
     brand.deleteOne();
     await med.save();
+    await recordAudit(req, "medicine.delete-brand", "medicine", med._id, {
+      salt: med.salt,
+      brandId: req.params.brandId,
+      brandName
+    });
 
     res.json({ success: true, message: "Brand deleted" });
   } catch (err) {
@@ -250,6 +277,11 @@ router.delete("/:id", requireOwner, async (req, res) => {
       return res.status(404).json({ success: false, message: "Medicine not found" });
     }
 
+    await recordAudit(req, "medicine.delete", "medicine", deletedMedicine._id, {
+      salt: deletedMedicine.salt,
+      storeId: deletedMedicine.storeId,
+      storeName: deletedMedicine.storeName
+    });
     res.json({ success: true, message: "Medicine deleted" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Unable to delete medicine" });

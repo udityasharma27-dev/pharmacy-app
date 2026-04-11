@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Store = require("../models/Store");
 const { requireAuth, requireOwner } = require("../middleware/auth");
+const { recordAudit } = require("../utils/audit");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -42,6 +43,11 @@ router.post("/", requireOwner, async (req, res) => {
     }
 
     const store = await Store.create({ name, code, address, phone });
+    await recordAudit(req, "store.create", "store", store._id, {
+      name: store.name,
+      code: store.code,
+      phone: store.phone
+    });
     res.json({ success: true, store });
   } catch (error) {
     res.status(500).json({ success: false, message: "Unable to create store" });

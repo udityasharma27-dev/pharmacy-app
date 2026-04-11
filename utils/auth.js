@@ -1,5 +1,14 @@
 const crypto = require("crypto");
-const TOKEN_SECRET = process.env.TOKEN_SECRET || "pharmacy-app-secret";
+const DEFAULT_TOKEN_SECRET = "pharmacy-app-secret";
+
+function getTokenSecret() {
+  return process.env.TOKEN_SECRET || DEFAULT_TOKEN_SECRET;
+}
+
+function getTokenTtlMs() {
+  const hours = Number(process.env.TOKEN_TTL_HOURS || 168);
+  return Number.isFinite(hours) && hours > 0 ? hours * 60 * 60 * 1000 : 168 * 60 * 60 * 1000;
+}
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
   const hash = crypto.scryptSync(password, salt, 64).toString("hex");
@@ -23,17 +32,20 @@ function verifyPassword(password, storedValue) {
 }
 
 function createToken(user) {
+  const now = Date.now();
   const payload = Buffer.from(JSON.stringify({
     id: String(user._id || user.id),
     username: user.username,
     role: user.role,
     fullName: user.fullName || "",
     storeId: user.storeId || "",
-    storeName: user.storeName || ""
+    storeName: user.storeName || "",
+    iat: now,
+    exp: now + getTokenTtlMs()
   })).toString("base64url");
 
   const signature = crypto
-    .createHmac("sha256", TOKEN_SECRET)
+    .createHmac("sha256", getTokenSecret())
     .update(payload)
     .digest("base64url");
 
@@ -47,7 +59,7 @@ function verifyToken(token) {
 
   const [payload, signature] = token.split(".");
   const expectedSignature = crypto
-    .createHmac("sha256", TOKEN_SECRET)
+    .createHmac("sha256", getTokenSecret())
     .update(payload)
     .digest("base64url");
 
@@ -56,7 +68,11 @@ function verifyToken(token) {
   }
 
   try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!parsed?.id || !parsed?.exp || Date.now() > Number(parsed.exp)) {
+      return null;
+    }
+    return parsed;
   } catch (error) {
     return null;
   }

@@ -175,7 +175,7 @@
         <input id="pass" type="password" placeholder="Enter password">
       </div>
 
-      <button onclick="login()">Login To Dashboard</button>
+      <button id="loginBtn" onclick="login()">Login To Dashboard</button>
       <p id="message" class="message"></p>
       <div class="install">
         <button type="button" data-install-app hidden onclick="installPharmacyApp()">Install On Phone</button>
@@ -188,8 +188,18 @@
   <script>
     const URL = getApiBaseUrl();
     const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
+    let isLoggingIn = false;
+
+    function setLoginBusy(isBusy) {
+      isLoggingIn = isBusy;
+      const button = document.getElementById("loginBtn");
+      if (!button) return;
+      button.disabled = isBusy;
+      button.textContent = isBusy ? "Signing In..." : "Login To Dashboard";
+    }
 
     async function login() {
+      if (isLoggingIn) return;
       const username = document.getElementById("user").value.trim();
       const password = document.getElementById("pass").value;
       const apiBase = getApiBaseUrl();
@@ -208,6 +218,7 @@
       }
 
       try {
+        setLoginBusy(true);
         const res = await fetch(apiBase + "/users/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -229,6 +240,8 @@
         message.innerText = isWebOrigin
           ? "Server is not reachable. Start the backend and open the app from that same server address."
           : "Server is not reachable. Check that the live backend is running.";
+      } finally {
+        setLoginBusy(false);
       }
     }
   </script>

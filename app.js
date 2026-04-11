@@ -17,6 +17,10 @@ let recentBillingItems = JSON.parse(localStorage.getItem("recentBillingItems") |
 let quickQuantityValue = 1;
 let formMemory = JSON.parse(localStorage.getItem("inventoryFormMemory") || '{"supplier":"","category":""}');
 let isSavingMedicine = false;
+let isCreatingStore = false;
+let isCreatingStaff = false;
+let isLookingUpCustomer = false;
+let isSavingMember = false;
 
 if (!localStorage.getItem("token")) window.location.href = "index.html";
 
@@ -159,6 +163,13 @@ function setMedicineSaveState(isSaving) {
     keepOpenBtn.disabled = isSaving;
     keepOpenBtn.textContent = isSaving ? "Saving..." : "Save & Add Another";
   }
+}
+
+function setButtonBusy(id, isBusy, busyText, idleText) {
+  const button = document.getElementById(id);
+  if (!button) return;
+  button.disabled = isBusy;
+  button.textContent = isBusy ? busyText : idleText;
 }
 
 async function loadCurrentUser() {
@@ -957,6 +968,7 @@ function updateMembershipUi() {
 }
 
 async function lookupCustomer() {
+  if (isLookingUpCustomer) return;
   const phone = String(document.getElementById("customerPhone").value || "").replace(/\D/g, "");
   const name = document.getElementById("customerName").value.trim();
 
@@ -969,6 +981,8 @@ async function lookupCustomer() {
   }
 
   try {
+    isLookingUpCustomer = true;
+    setButtonBusy("lookupCustomerBtn", true, "Checking...", "Check Membership");
     const data = await fetchJson(`/customers/lookup/${phone}`);
     if (data.customer) {
       selectedCustomer = {
@@ -993,10 +1007,14 @@ async function lookupCustomer() {
     renderCart();
   } catch (error) {
     setMessage(error.message, "error");
+  } finally {
+    isLookingUpCustomer = false;
+    setButtonBusy("lookupCustomerBtn", false, "Checking...", "Check Membership");
   }
 }
 
 async function saveMember() {
+  if (isSavingMember) return;
   const phone = String(document.getElementById("customerPhone").value || "").replace(/\D/g, "");
   const name = document.getElementById("customerName").value.trim();
   const membershipDiscountPercent = Number(document.getElementById("memberDiscount").value || 0);
@@ -1010,6 +1028,8 @@ async function saveMember() {
   }
 
   try {
+    isSavingMember = true;
+    setButtonBusy("saveMemberBtn", true, "Saving...", "Save As Member");
     const data = await fetchJson("/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1033,6 +1053,9 @@ async function saveMember() {
     setMessage("Customer saved as member.", "success");
   } catch (error) {
     setMessage(error.message, "error");
+  } finally {
+    isSavingMember = false;
+    setButtonBusy("saveMemberBtn", false, "Saving...", "Save As Member");
   }
 }
 
@@ -1089,6 +1112,7 @@ function clearInventoryForm(keepMemoryDefaults = true) {
 }
 
 async function createStaffAccount() {
+  if (isCreatingStaff) return;
   const payload = {
     username: document.getElementById("staffUsername").value.trim(),
     password: document.getElementById("staffPassword").value,
@@ -1107,6 +1131,8 @@ async function createStaffAccount() {
   }
 
   try {
+    isCreatingStaff = true;
+    setButtonBusy("createStaffBtn", true, "Creating...", "Create Account");
     await fetchJson("/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1121,10 +1147,14 @@ async function createStaffAccount() {
     await loadData();
   } catch (error) {
     setMessage(error.message, "error");
+  } finally {
+    isCreatingStaff = false;
+    setButtonBusy("createStaffBtn", false, "Creating...", "Create Account");
   }
 }
 
 async function createStore() {
+  if (isCreatingStore) return;
   const payload = {
     name: document.getElementById("storeNameInput").value.trim(),
     code: document.getElementById("storeCodeInput").value.trim(),
@@ -1137,6 +1167,8 @@ async function createStore() {
   }
 
   try {
+    isCreatingStore = true;
+    setButtonBusy("createStoreBtn", true, "Adding...", "Add Store");
     await fetchJson("/stores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1149,6 +1181,9 @@ async function createStore() {
     await loadData();
   } catch (error) {
     setMessage(error.message, "error");
+  } finally {
+    isCreatingStore = false;
+    setButtonBusy("createStoreBtn", false, "Adding...", "Add Store");
   }
 }
 

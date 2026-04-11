@@ -109,10 +109,10 @@
         <div class="action-row" style="margin-top:18px">
           <button class="btn btn-primary" id="refreshBtn" onclick="checkPaymentStatus()">Check Payment</button>
           <button class="btn btn-primary" id="confirmBtn" onclick="confirmCurrentMethod()">Confirm Payment Received</button>
-          <button class="btn btn-warning" id="demoBtn" onclick="simulatePaymentSuccess()">Mark UPI Received</button>
+          <button class="btn btn-warning" id="manualUpiBtn" onclick="confirmManualUpiReceipt()">Confirm UPI Received</button>
           <button class="btn btn-secondary" onclick="backToApp()">Return Without Billing</button>
         </div>
-        <p class="note" id="helperText">For UPI, ask the customer to scan the QR and then click `Mark UPI Received` after the payment arrives. Cash and COD are confirmed using the `Confirm Payment Received` button.</p>
+          <p class="note" id="helperText">For UPI, ask the customer to scan the QR and then confirm receipt only after the payment arrives. Cash and COD are confirmed using the `Confirm Payment Received` button.</p>
       </div>
     </div>
   </div>
@@ -125,6 +125,7 @@
     let paymentSessionId="";
     let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
     let pollTimer=null;
+    let isFinalizingPayment=false;
     if(!localStorage.getItem("token"))window.location.href="index.html";
 
     function getToken(){return localStorage.getItem("token")||""}
@@ -133,13 +134,21 @@
     function authHeaders(extra={}){return{...extra,Authorization:"Bearer "+getToken()}}
     async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.href="index.html";throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
     const formatAmount=v=>"Rs "+Number(v||0).toFixed(2);
+    function setPaymentActionState(isBusy){
+      isFinalizingPayment=isBusy;
+      refreshBtn.disabled=isBusy;
+      confirmBtn.disabled=isBusy;
+      manualUpiBtn.disabled=isBusy;
+      confirmBtn.textContent=isBusy?"Processing...":paymentMethod==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
+      manualUpiBtn.textContent=isBusy?"Processing...":"Confirm UPI Received";
+    }
 
     function renderOrder(){
-      if(!cart.length){
-        items.innerHTML='<p class="empty">No checkout items found. Go back to the app and add items to the cart first.</p>';
-        refreshBtn.disabled=true;confirmBtn.disabled=true;demoBtn.disabled=true;
-        return;
-      }
+        if(!cart.length){
+          items.innerHTML='<p class="empty">No checkout items found. Go back to the app and add items to the cart first.</p>';
+          refreshBtn.disabled=true;confirmBtn.disabled=true;manualUpiBtn.disabled=true;
+          return;
+        }
       let totalValue=0,units=0;
       const discountPercent=Number(customer?.membershipDiscountPercent||0);
       items.innerHTML=cart.map(item=>{
@@ -181,13 +190,13 @@
       localStorage.setItem("paymentMethod",paymentMethod);
       ["manual-upi","cash","cash-on-delivery"].forEach(value=>{
         document.getElementById(`method-${value==="manual-upi"?"upi":value==="cash"?"cash":"cod"}`).classList.toggle("active",value===method);
-      });
-      upiPanel.style.display=method==="manual-upi"?"grid":"none";
-      demoBtn.style.display=method==="manual-upi"?"inline-block":"none";
-      refreshBtn.style.display=method==="manual-upi"?"inline-block":"none";
-      confirmBtn.textContent=method==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
-      updateHelperText();
-    }
+        });
+        upiPanel.style.display=method==="manual-upi"?"grid":"none";
+        manualUpiBtn.style.display=method==="manual-upi"?"inline-block":"none";
+        refreshBtn.style.display=method==="manual-upi"?"inline-block":"none";
+        confirmBtn.textContent=method==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
+        updateHelperText();
+      }
 
     async function createPaymentSession(forceNew=false){
       if(!cart.length)return;
@@ -208,23 +217,28 @@
     }
 
     async function generateBill(){
-      const data=await fetchJson("/bills",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({paymentSessionId})
-      });
+      if(isFinalizingPayment)return;
+      setPaymentActionState(true);
+      try{
+        const data=await fetchJson("/bills",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({paymentSessionId})
+        });
       localStorage.removeItem("pendingCheckoutCart");
       localStorage.removeItem("pendingCustomer");
       localStorage.removeItem("pharmacyCart");
       localStorage.removeItem("paymentSessionId");
-      localStorage.removeItem("paymentMethod");
-      setMessage("Payment confirmed. Bill created for "+formatAmount(data.totalAmount)+".","success");
-      updateStatusBox("BILLED");
-      clearInterval(pollTimer);
-      setTimeout(()=>{window.location.href="app.html"},1400);
-    }
+        localStorage.removeItem("paymentMethod");
+        setMessage("Payment confirmed. Bill created for "+formatAmount(data.totalAmount)+".","success");
+        updateStatusBox("BILLED");
+        clearInterval(pollTimer);
+        setTimeout(()=>{window.location.href="app.html"},1400);
+      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+      }
 
     async function checkPaymentStatus(){
+      if(isFinalizingPayment)return;
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       if(paymentMethod!=="manual-upi"){setMessage("Use the confirm button for cash or cash on delivery.","error");return;}
       try{
@@ -249,32 +263,36 @@
       }catch(error){setMessage(error.message,"error");}
     }
 
-    async function simulatePaymentSuccess(){
+    async function confirmManualUpiReceipt(){
+      if(isFinalizingPayment)return;
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       try{
-        await fetchJson(`/payments/session/${paymentSessionId}/mock-success`,{
+        setPaymentActionState(true);
+        await fetchJson(`/payments/session/${paymentSessionId}/manual-confirm`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({paymentReference:`DEMO-${Date.now()}`})
+          body:JSON.stringify({paymentReference:`UPI-${Date.now()}`})
         });
         await generateBill();
-      }catch(error){setMessage(error.message,"error");}
+      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
     }
 
     async function confirmCurrentMethod(){
+      if(isFinalizingPayment)return;
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       if(paymentMethod==="manual-upi"){
-        await simulatePaymentSuccess();
+        await confirmManualUpiReceipt();
         return;
       }
       try{
+        setPaymentActionState(true);
         await fetchJson(`/payments/session/${paymentSessionId}/cash-received`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({provider:paymentMethod,paymentReference:`${paymentMethod.toUpperCase()}-${Date.now()}`})
         });
         await generateBill();
-      }catch(error){setMessage(error.message,"error");}
+      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
     }
 
     function startPolling(){

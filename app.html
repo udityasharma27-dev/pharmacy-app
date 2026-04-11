@@ -154,9 +154,9 @@
             <div class="field"><label for="storePhoneInput">Store Phone</label><input id="storePhoneInput" placeholder="Contact number"></div>
           </div>
           <div class="field" style="margin-top:12px;"><label for="storeAddressInput">Address</label><input id="storeAddressInput" placeholder="Store address"></div>
-          <div class="actions-row" style="margin-top:14px;">
-            <button class="btn btn-primary" onclick="createStore()">Add Store</button>
-          </div>
+            <div class="actions-row" style="margin-top:14px;">
+              <button class="btn btn-primary" id="createStoreBtn" onclick="createStore()">Add Store</button>
+            </div>
           <div id="storeList" class="supplier-list" style="margin-top:16px;"></div>
         </div>
       </div>
@@ -170,10 +170,10 @@
             <div class="field"><label for="customerName">Customer Name</label><input id="customerName" placeholder="Optional name"></div>
             <div class="field"><label for="memberDiscount">Member Discount %</label><input id="memberDiscount" type="number" min="0" max="100" step="1" value="0"></div>
           </div>
-          <div class="actions-row" style="margin-bottom:16px;">
-            <button class="btn btn-secondary" onclick="lookupCustomer()">Check Membership</button>
-            <button class="btn btn-soft owner-only" id="saveMemberBtn" hidden onclick="saveMember()">Save As Member</button>
-          </div>
+            <div class="actions-row" style="margin-bottom:16px;">
+              <button class="btn btn-secondary" id="lookupCustomerBtn" onclick="lookupCustomer()">Check Membership</button>
+              <button class="btn btn-soft owner-only" id="saveMemberBtn" hidden onclick="saveMember()">Save As Member</button>
+            </div>
           <div id="membershipStatus" class="status-line" style="margin-bottom:16px;">No customer selected.</div>
           <div class="finder-grid">
             <div class="field finder-field">
@@ -240,9 +240,9 @@
               <div class="field"><label for="staffBonus">Bonus Per Extra Patient</label><input id="staffBonus" type="number" min="0" step="0.01" placeholder="100"></div>
               <div class="field"><label for="staffRole">Role</label><select id="staffRole"><option value="worker">Worker</option><option value="owner">Owner</option></select></div>
             </div>
-            <div class="actions-row" style="margin-top:14px;">
-              <button class="btn btn-primary" onclick="createStaffAccount()">Create Account</button>
-            </div>
+              <div class="actions-row" style="margin-top:14px;">
+                <button class="btn btn-primary" id="createStaffBtn" onclick="createStaffAccount()">Create Account</button>
+              </div>
           </div>
 
           <div class="subpanel">

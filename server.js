@@ -14,8 +14,15 @@ const OWNER_PASSWORD = process.env.OWNER_PASSWORD || "123";
 const STAFF_USERNAME = process.env.STAFF_USERNAME || "staff";
 const STAFF_PASSWORD = process.env.STAFF_PASSWORD || "123";
 
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  next();
+});
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.static(__dirname));
 
 // ROUTES

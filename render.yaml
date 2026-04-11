@@ -17,8 +17,14 @@ services:
       - key: OWNER_USERNAME
         value: admin
       - key: OWNER_PASSWORD
-        value: 123
+        sync: false
       - key: STAFF_USERNAME
         value: staff
       - key: STAFF_PASSWORD
-        value: 123
+        sync: false
+      - key: TOKEN_SECRET
+        sync: false
+      - key: TOKEN_TTL_HOURS
+        value: 168
+      - key: ALLOW_MANUAL_UPI_CONFIRM
+        value: true

@@ -3,6 +3,10 @@ const router = express.Router();
 const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
 
+function isManualUpiConfirmationAllowed() {
+  return String(process.env.ALLOW_MANUAL_UPI_CONFIRM || "true").trim().toLowerCase() !== "false";
+}
+
 router.use(requireAuth);
 
 router.post("/session", async (req, res) => {
@@ -83,9 +87,12 @@ router.get("/session/:id", async (req, res) => {
   }
 });
 
-// Demo/testing endpoint. Replace this with a real provider webhook or payment verification callback.
-router.post("/session/:id/mock-success", async (req, res) => {
+router.post("/session/:id/manual-confirm", async (req, res) => {
   try {
+    if (!isManualUpiConfirmationAllowed()) {
+      return res.status(403).json({ success: false, message: "Manual UPI confirmation is disabled" });
+    }
+
     const session = await PaymentSession.findById(req.params.id);
 
     if (!session || session.userId !== req.user.id) {
@@ -96,8 +103,9 @@ router.post("/session/:id/mock-success", async (req, res) => {
       return res.status(400).json({ success: false, message: "Bill already generated" });
     }
 
+    session.provider = "manual-upi";
     session.status = "PAID";
-    session.paymentReference = String(req.body.paymentReference || "").trim() || `DEMO-${Date.now()}`;
+    session.paymentReference = String(req.body.paymentReference || "").trim() || `UPI-${Date.now()}`;
     await session.save();
 
     res.json({
@@ -106,7 +114,7 @@ router.post("/session/:id/mock-success", async (req, res) => {
       paymentReference: session.paymentReference
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Unable to update payment status" });
+    res.status(500).json({ success: false, message: "Unable to confirm UPI payment" });
   }
 });
 

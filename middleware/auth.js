@@ -1,19 +1,37 @@
+const User = require("../models/User");
 const { verifyToken } = require("../utils/auth");
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.slice(7).trim()
     : "";
 
-  const user = verifyToken(token);
+  const session = verifyToken(token);
 
-  if (!user) {
+  if (!session) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
-  req.user = user;
-  next();
+  try {
+    const user = await User.findById(session.id);
+
+    if (!user || user.isActive === false) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    req.user = {
+      id: String(user._id),
+      username: user.username,
+      role: user.role,
+      fullName: user.fullName || "",
+      storeId: user.storeId || "",
+      storeName: user.storeName || ""
+    };
+    next();
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Unable to verify session" });
+  }
 }
 
 function requireOwner(req, res, next) {

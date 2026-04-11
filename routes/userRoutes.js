@@ -5,6 +5,9 @@ const Bill = require("../models/Bill");
 const Store = require("../models/Store");
 const { createToken, hashPassword, verifyPassword, verifyToken } = require("../utils/auth");
 const { requireAuth, requireOwner } = require("../middleware/auth");
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+const loginAttempts = new Map();
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -17,6 +20,33 @@ function normalizePhone(value) {
 function parseMoney(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function getLoginAttemptState(key) {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    const fresh = { count: 0, resetAt: now + LOGIN_WINDOW_MS };
+    loginAttempts.set(key, fresh);
+    return fresh;
+  }
+  return entry;
+}
+
+function recordFailedLogin(key) {
+  const entry = getLoginAttemptState(key);
+  entry.count += 1;
+  loginAttempts.set(key, entry);
+}
+
+function clearFailedLogin(key) {
+  loginAttempts.delete(key);
+}
+
+function getLoginKey(req, username) {
+  const forwardedFor = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const ip = forwardedFor || req.ip || "unknown";
+  return `${ip}:${String(username || "").toLowerCase()}`;
 }
 
 function currentMonthWindow(now = new Date()) {
@@ -110,14 +140,21 @@ router.post("/login", async (req, res) => {
   try {
     const username = normalizeText(req.body.username);
     const password = String(req.body.password || "");
+    const loginKey = getLoginKey(req, username);
+    const attempts = getLoginAttemptState(loginKey);
 
     if (!username || !password) {
       return res.status(400).json({ success: false, message: "Username and password are required" });
     }
 
+    if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
+      return res.status(429).json({ success: false, message: "Too many login attempts. Please wait and try again." });
+    }
+
     const user = await User.findOne({ username });
 
     if (!user) {
+      recordFailedLogin(loginKey);
       return res.status(401).json({ success: false, message: "Invalid username or password" });
     }
 
@@ -131,9 +168,11 @@ router.post("/login", async (req, res) => {
     }
 
     if (!passwordMatches) {
+      recordFailedLogin(loginKey);
       return res.status(401).json({ success: false, message: "Invalid username or password" });
     }
 
+    clearFailedLogin(loginKey);
     const token = createToken(user);
 
     res.json({

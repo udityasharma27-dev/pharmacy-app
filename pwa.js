@@ -30,6 +30,30 @@ window.installPharmacyApp = installPharmacyApp;
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js").then(registration => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+
+      registration.addEventListener("updatefound", () => {
+        const installingWorker = registration.installing;
+        if (!installingWorker) return;
+        installingWorker.addEventListener("statechange", () => {
+          if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+            installingWorker.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+
+      setInterval(() => {
+        registration.update().catch(() => {});
+      }, 60000);
+    }).catch(() => {});
+  });
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (window.__pharmacySwRefreshing) return;
+    window.__pharmacySwRefreshing = true;
+    window.location.reload();
   });
 }

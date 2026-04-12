@@ -8,7 +8,7 @@
   function getDefaultBase() {
     if (window.location.protocol === "http:" || window.location.protocol === "https:") {
       if (window.location.protocol === "https:" && window.location.hostname === "localhost") {
-        return "";
+        return normalizeBase(PUBLIC_API_BASE);
       }
       return normalizeBase(window.location.origin);
     }

@@ -11,7 +11,16 @@ const billSchema = new mongoose.Schema({
       categoryType: String,
       brandType: String,
       lineSubtotal: Number,
+      baseDiscountPercent: Number,
       discountPercent: Number,
+      extraDiscountPercent: Number,
+      appliedOffers: [
+        {
+          code: String,
+          label: String,
+          discountPercent: Number
+        }
+      ],
       discountAmount: Number,
       total: Number
     }

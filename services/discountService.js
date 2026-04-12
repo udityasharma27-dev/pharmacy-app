@@ -75,14 +75,15 @@ function buildDiscountLine({ medicine, brand, quantity, customer }) {
   const safeQuantity = Number(quantity || 0);
   const projectedVisitCount = getProjectedVisitCount(customer);
   const categoryType = getPricingBucket(medicine.category, brand.brandType);
-  const discountPercent = getDiscountPercent({
+  const baseDiscountPercent = getDiscountPercent({
     membership: customer.membership,
     visitCount: projectedVisitCount,
     category: medicine.category,
     brandType: brand.brandType
   });
+  const finalDiscountPercent = roundMoney(baseDiscountPercent);
   const lineSubtotal = roundMoney(unitPrice * safeQuantity);
-  const discountAmount = roundMoney(lineSubtotal * (discountPercent / 100));
+  const discountAmount = roundMoney(lineSubtotal * (finalDiscountPercent / 100));
   const lineTotal = roundMoney(Math.max(0, lineSubtotal - discountAmount));
   const lineProfit = roundMoney(lineTotal - (unitCostPrice * safeQuantity));
 
@@ -97,7 +98,10 @@ function buildDiscountLine({ medicine, brand, quantity, customer }) {
     categoryType,
     brandType: brand.brandType || "Branded",
     lineSubtotal,
-    discountPercent,
+    baseDiscountPercent,
+    discountPercent: finalDiscountPercent,
+    extraDiscountPercent: 0,
+    appliedOffers: [],
     discountAmount,
     total: lineTotal,
     profit: lineProfit

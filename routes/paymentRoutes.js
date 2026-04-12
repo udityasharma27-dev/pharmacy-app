@@ -9,6 +9,8 @@ const {
   buildDiscountLine,
   summarizeDiscountLines
 } = require("../services/discountService");
+const { getOfferConfig } = require("../services/offerConfigService");
+const { evaluateOfferRules } = require("../services/offersEngine");
 
 function isManualUpiConfirmationAllowed() {
   return String(process.env.ALLOW_MANUAL_UPI_CONFIRM || "true").trim().toLowerCase() !== "false";
@@ -39,6 +41,7 @@ router.post("/session", async (req, res) => {
       ? await Customer.findOne({ phone: normalizedPhone }).lean()
       : null;
     const customer = buildCustomerSnapshot(customerRecord, requestedCustomer);
+    const offerConfig = await getOfferConfig();
     const mergedItems = new Map();
     const normalizedItems = [];
 
@@ -73,12 +76,26 @@ router.post("/session", async (req, res) => {
         return res.status(404).json({ success: false, message: "Brand not found" });
       }
 
-      normalizedItems.push(buildDiscountLine({
+      const line = buildDiscountLine({
         medicine,
         brand,
         quantity: item.quantity,
         customer
-      }));
+      });
+      const offerEvaluation = evaluateOfferRules({
+        customer,
+        baseDiscountPercent: line.baseDiscountPercent,
+        offerConfig
+      });
+
+      line.discountPercent = offerEvaluation.finalDiscountPercent;
+      line.extraDiscountPercent = offerEvaluation.extraDiscountPercent;
+      line.appliedOffers = offerEvaluation.appliedOffers;
+      line.discountAmount = Number((line.lineSubtotal * (line.discountPercent / 100)).toFixed(2));
+      line.total = Number(Math.max(0, line.lineSubtotal - line.discountAmount).toFixed(2));
+      line.profit = Number((line.total - (line.costPrice * line.quantity)).toFixed(2));
+
+      normalizedItems.push(line);
     }
 
     const totals = summarizeDiscountLines(normalizedItems);

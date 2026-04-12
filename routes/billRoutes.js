@@ -136,7 +136,10 @@ router.post("/", async (req, res) => {
         categoryType: sessionItem?.categoryType || "",
         brandType: sessionItem?.brandType || item.brand.brandType || "Branded",
         lineSubtotal,
+        baseDiscountPercent: Number(sessionItem?.baseDiscountPercent || 0),
         discountPercent: Number(sessionItem?.discountPercent || 0),
+        extraDiscountPercent: Number(sessionItem?.extraDiscountPercent || 0),
+        appliedOffers: Array.isArray(sessionItem?.appliedOffers) ? sessionItem.appliedOffers : [],
         discountAmount: lineDiscountAmount,
         total: lineTotal
       });

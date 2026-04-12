@@ -3,610 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1db9ad">
+  <meta name="theme-color" content="#0f766e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Lumiere de Vie Pharma</title>
+  <title>Lumière de Vie Pharma Login</title>
   <link rel="manifest" href="manifest.webmanifest">
   <style>
     :root {
-      --teal: #20b8ac;
-      --teal-deep: #0f877f;
-      --teal-dark: #0d6f69;
-      --sand: #fff4ce;
-      --ink: #0f172a;
-      --muted: #5b6475;
-      --surface: #ffffff;
-      --line: rgba(148, 163, 184, 0.2);
-      --soft: #f8fbfc;
-      --shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
+      --bg: #f5eee5;
+      --card: rgba(255, 251, 246, 0.92);
+      --text: #231815;
+      --muted: #74655f;
+      --primary: #9d6b3f;
+      --primary-dark: #7e512b;
+      --danger: #a53d4b;
+      --shadow: 0 28px 75px rgba(68, 42, 24, 0.16);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
-      color: var(--ink);
-      background: #f5f8fb;
-    }
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: linear-gradient(180deg, var(--teal) 0%, #22c7b8 100%);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-    }
-    .topbar-inner,
-    .nav-inner,
-    .shell {
-      width: min(1320px, calc(100% - 32px));
-      margin: 0 auto;
-    }
-    .topbar-inner {
-      display: grid;
-      grid-template-columns: auto auto minmax(260px, 1fr) auto;
-      gap: 18px;
-      align-items: center;
-      padding: 12px 0;
-    }
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      color: #063c39;
-    }
-    .brand-mark {
-      width: 46px;
-      height: 46px;
-      border-radius: 15px;
-      background: linear-gradient(135deg, var(--teal-dark), #083c39);
-      color: white;
-      font-weight: 900;
+      min-height: 100vh;
       display: grid;
       place-items: center;
-    }
-    .brand strong,
-    .brand span { display: block; }
-    .brand strong { font-size: 21px; }
-    .brand span,
-    .deliver {
-      color: rgba(6, 60, 57, 0.82);
-      font-size: 13px;
-    }
-    .search {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.96);
-    }
-    .search input {
-      width: 100%;
-      border: 0;
-      outline: none;
-      background: transparent;
-      font-size: 14px;
-    }
-    .header-actions {
-      display: flex;
-      gap: 10px;
-    }
-    .header-btn,
-    .nav-pill,
-    .cta,
-    .mini-btn {
-      border: 0;
-      cursor: pointer;
-      font-weight: 800;
-    }
-    .header-btn {
-      border-radius: 999px;
-      padding: 11px 15px;
-      background: rgba(8, 61, 60, 0.16);
-      color: #083d3c;
-    }
-    .nav {
-      background: #0d7a73;
-    }
-    .nav-inner {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding: 10px 0;
-    }
-    .nav-pill {
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-      color: white;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(157, 107, 63, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(47, 111, 115, 0.14), transparent 26%),
+        linear-gradient(180deg, #fbf6ef 0%, var(--bg) 48%, #fffdfa 100%);
+      padding: 18px;
     }
     .shell {
-      padding: 22px 0 60px;
-    }
-    .hero {
+      width: min(1080px, 100%);
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 18px;
-      align-items: stretch;
-    }
-    .hero-banner {
-      padding: 34px;
-      border-radius: 28px;
-      background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, 0.28), transparent 24%),
-        linear-gradient(135deg, var(--sand) 0%, #ffe0a3 54%, #ffd0a8 100%);
+      grid-template-columns: 1.15fr 0.95fr;
+      background: var(--card);
+      border-radius: 30px;
+      overflow: hidden;
       box-shadow: var(--shadow);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .promo {
+      padding: 42px;
+      color: white;
+      background: linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
+      display: grid;
+      align-content: space-between;
+      min-height: 620px;
+    }
+    .promo h1 { margin: 0; font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+    .promo p { color: rgba(255, 255, 255, 0.82); font-size: 15px; max-width: 420px; }
+    .feature-list { display: grid; gap: 14px; }
+    .feature {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .feature strong { display: block; margin-bottom: 4px; }
+    .form-wrap {
+      padding: 42px 34px;
+      background: rgba(255, 255, 255, 0.86);
+      display: grid;
+      align-content: center;
     }
     .eyebrow {
       display: inline-flex;
+      width: fit-content;
       padding: 8px 12px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.6);
-      color: #9a5d17;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      background: #f8eee4;
+      color: #7e512b;
+      font-weight: 700;
+      margin-bottom: 14px;
     }
-    .hero-banner h1 {
-      margin: 14px 0 10px;
-      font-size: clamp(38px, 5vw, 60px);
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-    }
-    .hero-banner p {
-      margin: 0;
-      max-width: 58ch;
-      color: #684d2f;
-      line-height: 1.6;
-    }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 22px;
-    }
-    .cta {
-      border-radius: 999px;
-      padding: 14px 20px;
-      font-size: 14px;
-    }
-    .cta-primary {
-      background: linear-gradient(180deg, #24c6b8, var(--teal));
-      color: white;
-    }
-    .cta-secondary {
-      background: white;
-      color: var(--teal-dark);
-    }
-    .login-card {
-      padding: 26px;
-      border-radius: 28px;
-      background: white;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--line);
-      display: grid;
-      align-content: start;
-      gap: 14px;
-    }
-    .login-card h2 {
-      margin: 0;
-      font-size: 30px;
-      letter-spacing: -0.04em;
-    }
-    .auth-tabs {
-      display: inline-flex;
-      gap: 8px;
-      padding: 6px;
-      border-radius: 999px;
-      background: #eef7f6;
-      width: fit-content;
-    }
-    .auth-tab {
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 14px;
-      background: transparent;
-      color: var(--muted);
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .auth-tab.active {
-      background: white;
-      color: var(--teal-dark);
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    }
-    .auth-panel {
-      display: none;
-      gap: 14px;
-    }
-    .auth-panel.active {
-      display: grid;
-    }
-    .login-card p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-    .field {
-      display: grid;
-      gap: 7px;
-    }
-    .field label {
-      font-size: 13px;
-      font-weight: 800;
-      color: #475569;
-    }
-    .field input {
+    .form-wrap h2 { margin: 0 0 8px; font-size: 32px; }
+    .sub { margin: 0 0 22px; color: var(--muted); }
+    .field { display: grid; gap: 8px; margin-bottom: 16px; }
+    .field label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .field small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    input {
       width: 100%;
-      padding: 13px 14px;
+      padding: 14px 16px;
       border-radius: 16px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      font-size: 15px;
       outline: none;
-      font-size: 14px;
+      background: rgba(255, 255, 255, 0.96);
     }
-    .field input:focus {
-      border-color: rgba(32, 184, 172, 0.65);
-      box-shadow: 0 0 0 4px rgba(32, 184, 172, 0.12);
+    input:focus {
+      border-color: rgba(157, 107, 63, 0.56);
+      box-shadow: 0 0 0 4px rgba(157, 107, 63, 0.1);
     }
-    .login-btn {
+    button {
       width: 100%;
+      border: 0;
       border-radius: 16px;
       padding: 14px 18px;
-      background: linear-gradient(180deg, #24c6b8, var(--teal));
+      background: var(--primary);
       color: white;
       font-size: 15px;
-    }
-    .guest-link {
-      display: inline-flex;
-      justify-content: center;
-      border-radius: 16px;
-      padding: 13px 16px;
-      background: #edf8f7;
-      color: var(--teal-dark);
-      text-decoration: none;
       font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease;
     }
-    .message {
-      min-height: 20px;
-      color: #c0265d;
-      font-weight: 700;
-    }
-    .helper-note {
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: #edf8f7;
-      color: var(--teal-dark);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .helper-note strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-    .service-grid,
-    .category-grid,
-    .product-grid {
-      display: grid;
-      gap: 16px;
-      margin-top: 20px;
-    }
-    .service-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .service-card,
-    .category-card,
-    .product-card {
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-    }
-    .service-card { padding: 20px; }
-    .service-card h3,
-    .section-head h2,
-    .category-card strong,
-    .product-card h3 {
-      margin: 0;
-    }
-    .service-card p,
-    .category-card p,
-    .product-card p {
-      margin: 8px 0 0;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-    .section-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-top: 28px;
-    }
-    .section-head h2 {
-      font-size: 30px;
-      letter-spacing: -0.04em;
-    }
-    .mini-btn {
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: #edf8f7;
-      color: var(--teal-dark);
-    }
-    .category-card,
-    .product-card {
+    button:hover { transform: translateY(-1px); background: var(--primary-dark); }
+    .message { min-height: 24px; margin-top: 14px; font-weight: 700; color: var(--danger); }
+    .helper {
+      margin-top: 18px;
       padding: 16px;
-      display: grid;
-      gap: 12px;
+      border-radius: 18px;
+      background: #fcf7f1;
+      color: var(--muted);
+      font-size: 14px;
     }
-    .visual {
-      min-height: 148px;
-      border-radius: 20px;
-      display: grid;
-      place-items: center;
-      font-size: 34px;
-      font-weight: 900;
-      color: #0f172a;
-      background: linear-gradient(135deg, #ddf8f5, #f7fffd);
-    }
-    .visual.skin { background: linear-gradient(135deg, #ffe4ef, #fff8fb); }
-    .visual.digest { background: linear-gradient(135deg, #f2eaff, #fcf8ff); }
-    .visual.relief { background: linear-gradient(135deg, #fff1d7, #fffaf1); }
-    .price-line {
+    .helper strong { color: var(--text); }
+    .install {
+      margin-top: 14px;
       display: flex;
-      gap: 10px;
-      align-items: baseline;
-      flex-wrap: wrap;
+      justify-content: flex-start;
     }
-    .price-line strong {
-      font-size: 24px;
-      letter-spacing: -0.03em;
+    .install button {
+      width: auto;
+      background: #f8eee4;
+      color: #7e512b;
     }
-    .price-line span {
-      color: #e11d8d;
-      font-size: 13px;
-      font-weight: 800;
-    }
-    .tag-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .tag {
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #edf8f7;
-      color: var(--teal-dark);
-      font-size: 12px;
-      font-weight: 800;
-    }
-    @media (max-width: 1100px) {
-      .topbar-inner,
-      .hero,
-      .service-grid,
-      .category-grid,
-      .product-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    @media (max-width: 760px) {
-      .topbar-inner,
-      .nav-inner,
-      .shell {
-        width: min(100%, calc(100% - 24px));
-      }
-      .hero-banner,
-      .login-card {
-        padding: 20px;
-      }
-      .hero-banner h1 {
-        font-size: 38px;
-      }
-      .section-head h2 {
-        font-size: 26px;
-      }
+    @media (max-width: 920px) {
+      .shell { grid-template-columns: 1fr; }
+      .promo { min-height: auto; padding: 30px; }
+      .form-wrap { padding: 30px 24px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-mark">LV</div>
-        <div>
-          <strong>Lumiere de Vie</strong>
-          <span>Pharmacy storefront</span>
-        </div>
-      </div>
-      <div class="deliver">Deliver to Delhi, 110001</div>
-      <label class="search">
-        <span>Search</span>
-        <input placeholder="Search medicines, wellness, personal care and daily essentials">
-      </label>
-      <div class="header-actions">
-        <button class="header-btn" type="button" onclick="window.location.href='app.html'">Open dashboard</button>
-        <a class="header-btn" href="share/Lumiere-de-Vie-Pharma.apk" download>Download APK</a>
-      </div>
-    </div>
-    <div class="nav">
-      <div class="nav-inner">
-        <button class="nav-pill" type="button">All Categories</button>
-        <button class="nav-pill" type="button">Medicine</button>
-        <button class="nav-pill" type="button">Lab Tests</button>
-        <button class="nav-pill" type="button">Beauty</button>
-        <button class="nav-pill" type="button">Wellness</button>
-        <button class="nav-pill" type="button">Health Corner</button>
-        <button class="nav-pill" type="button">Offers</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="shell">
-    <section class="hero">
-      <div class="hero-banner">
-        <div class="eyebrow">Summer Wellness Savings</div>
-        <h1>Shop smarter for everyday care and pharmacy essentials.</h1>
-        <p>Run the pharmacy with faster billing, cleaner stock control, low-stock alerts, and a calmer day-to-day counter workflow.</p>
-        <div class="hero-actions">
-          <button class="cta cta-primary" type="button" onclick="window.location.href='app.html'">Open pharmacy app</button>
-          <a class="cta cta-secondary" href="share/Lumiere-de-Vie-Pharma.apk" download>Download Android APK</a>
-          <button class="cta cta-secondary" type="button" onclick="showAuthPanel('staff')">Staff login</button>
-        </div>
+  <div class="shell">
+    <section class="promo">
+      <div>
+        <h1>Lumière de Vie Pharma</h1>
+        <p>Bring a refined, modern pharmacy experience to the counter with premium inventory control, guided billing, patient loyalty, and staff performance visibility.</p>
       </div>
 
-      <aside class="login-card">
-        <div class="eyebrow">Account Access</div>
-        <h2>Staff sign in</h2>
-        <p>Use the staff account to manage billing, inventory, store alerts, and daily pharmacy operations.</p>
-
-        <div id="staffAuthPanel" class="auth-panel active">
-          <div class="field">
-            <label for="user">Username</label>
-            <input id="user" placeholder="Enter username">
-          </div>
-
-          <div class="field">
-            <label for="pass">Password</label>
-            <input id="pass" type="password" placeholder="Enter password">
-          </div>
-
-          <button id="loginBtn" class="login-btn" onclick="login()">Login to dashboard</button>
+      <div class="feature-list">
+        <div class="feature">
+          <strong>Curated Inventory</strong>
+          Search medicines, manage stock, track batches, and keep shelves beautifully organized.
         </div>
-
-        <a class="guest-link" href="app.html">Continue to pharmacy app</a>
-        <p id="message" class="message"></p>
-      </aside>
-    </section>
-
-    <section class="service-grid">
-      <article class="service-card">
-        <h3>Counter billing</h3>
-        <p>Bill prescription and OTC medicines quickly with barcode search, quantity shortcuts, and batch-aware stock.</p>
-      </article>
-      <article class="service-card">
-        <h3>Inventory control</h3>
-        <p>Track supplier stock, expiry dates, and branch-ready medicine data from one workspace.</p>
-      </article>
-      <article class="service-card">
-        <h3>Team operations</h3>
-        <p>Keep billing, alerts, attendance, and daily performance in one pharmacy system.</p>
-      </article>
-      <article class="service-card">
-        <h3>Android app download</h3>
-        <p>Install the pharmacy APK directly from this site for staff devices.</p>
-        <div class="hero-actions" style="margin-top:14px;">
-          <a class="cta cta-primary" href="share/Lumiere-de-Vie-Pharma.apk" download>Download APK</a>
+        <div class="feature">
+          <strong>Elegant Billing</strong>
+          Create invoices quickly, review history, and serve patients with a smoother checkout flow.
         </div>
-      </article>
+        <div class="feature">
+          <strong>Operational Insight</strong>
+          Monitor suppliers, expiry dates, staff performance, and daily profit from one refined workspace.
+        </div>
+      </div>
     </section>
 
-    <div class="section-head">
-      <h2>Daily pharmacy workflow</h2>
-      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open app</button>
-    </div>
-    <section class="category-grid">
-      <article class="category-card">
-        <div class="visual relief">PF</div>
-        <strong>Fast billing</strong>
-        <p>Quickly search medicine, select brand, and move straight to checkout.</p>
-      </article>
-      <article class="category-card">
-        <div class="visual digest">DG</div>
-        <strong>Branch stock</strong>
-        <p>Keep better visibility on stock levels and transfer needs across stores.</p>
-      </article>
-      <article class="category-card">
-        <div class="visual skin">SK</div>
-        <strong>Expiry checks</strong>
-        <p>Catch expiring batches and low-stock items before they slow the counter down.</p>
-      </article>
-      <article class="category-card">
-        <div class="visual">WL</div>
-        <strong>Team dashboard</strong>
-        <p>Track daily billing, revenue, and staff activity in one place.</p>
-      </article>
-    </section>
+    <section class="form-wrap">
+      <div class="eyebrow">Secure Sign In</div>
+      <h2>Welcome back</h2>
+      <p class="sub">Use your pharmacy account to open the dashboard.</p>
 
-    <div class="section-head">
-      <h2>Counter-ready features</h2>
-      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open dashboard</button>
-    </div>
-    <section class="product-grid">
-      <article class="product-card">
-        <div class="visual relief">MD</div>
-        <h3>Barcode billing</h3>
-        <p>Scan or type medicine barcode and select stock faster during billing.</p>
-        <div class="price-line"><strong>Fast</strong><span>Counter ready</span></div>
-        <div class="tag-row"><span class="tag">Billing</span><span class="tag">Barcode</span></div>
-      </article>
-      <article class="product-card">
-        <div class="visual digest">AC</div>
-        <h3>Inventory search</h3>
-        <p>Find medicine by salt, supplier, batch, or brand without leaving the main desk.</p>
-        <div class="price-line"><strong>Smart</strong><span>Search</span></div>
-        <div class="tag-row"><span class="tag">Inventory</span><span class="tag">Search</span></div>
-      </article>
-      <article class="product-card">
-        <div class="visual skin">CR</div>
-        <h3>Low-stock alerts</h3>
-        <p>Review the brands that need restocking before they affect patient service.</p>
-        <div class="price-line"><strong>Live</strong><span>Alerts</span></div>
-        <div class="tag-row"><span class="tag">Alerts</span><span class="tag">Restock</span></div>
-      </article>
-      <article class="product-card">
-        <div class="visual">VT</div>
-        <h3>Bill history</h3>
-        <p>Check completed invoices, revenue, profit, and print copies when needed.</p>
-        <div class="price-line"><strong>Clear</strong><span>History</span></div>
-        <div class="tag-row"><span class="tag">Bills</span><span class="tag">Reports</span></div>
-      </article>
+      <div class="field">
+        <label for="user">Username</label>
+        <input id="user" placeholder="Enter username">
+      </div>
+
+      <div class="field">
+        <label for="pass">Password</label>
+        <input id="pass" type="password" placeholder="Enter password">
+      </div>
+
+      <button id="loginBtn" onclick="login()">Login To Dashboard</button>
+      <p id="message" class="message"></p>
+      <div class="install">
+        <button type="button" data-install-app hidden onclick="installPharmacyApp()">Install On Phone</button>
+      </div>
+
     </section>
-  </main>
+  </div>
 
   <script src="api-base.js"></script>
   <script>
+    const URL = getApiBaseUrl();
     const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
     let isLoggingIn = false;
-    let activeAuthMode = "staff";
-
-    if (localStorage.getItem("token")) {
-      window.location.replace(`app.html?v=${Date.now()}`);
-    }
-
-    function normalizePhone(value) {
-      return String(value || "").replace(/\D/g, "").trim();
-    }
-
-    function normalizeBirthDate(value) {
-      const raw = String(value || "").trim();
-      return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw.replace(/-/g, "") : "";
-    }
-
-    function buildCustomerPassword(name, birthDate) {
-      const cleanName = String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-      const cleanBirthDate = normalizeBirthDate(birthDate);
-      return cleanName && cleanBirthDate ? `${cleanName}${cleanBirthDate}` : "";
-    }
-
-    function showAuthPanel() {
-      activeAuthMode = "staff";
-      document.getElementById("user").focus();
-    }
 
     function setLoginBusy(isBusy) {
       isLoggingIn = isBusy;
       const button = document.getElementById("loginBtn");
       if (!button) return;
       button.disabled = isBusy;
-      button.textContent = isBusy ? "Signing in..." : "Login to dashboard";
-    }
-
-    function completeAuth(data) {
-      localStorage.clear();
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.role);
-      localStorage.setItem("appExperienceMode", "staff");
-      window.location.replace(`app.html?v=${Date.now()}`);
+      button.textContent = isBusy ? "Signing In..." : "Login To Dashboard";
     }
 
     async function login() {
@@ -644,7 +233,10 @@
           return;
         }
 
-        completeAuth(data);
+        localStorage.clear();
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+        window.location.replace(`app.html?v=${Date.now()}`);
       } catch (error) {
         message.innerText = isWebOrigin
           ? "Server is not reachable. Start the backend and open the app from that same server address."
@@ -653,8 +245,6 @@
         setLoginBusy(false);
       }
     }
-
-    showAuthPanel();
   </script>
   <script src="pwa.js"></script>
 </body>

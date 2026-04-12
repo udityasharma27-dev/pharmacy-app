@@ -33,13 +33,6 @@ let isSavingMember = false;
 let isRefreshingData = false;
 let refreshTimer = null;
 let isSubmittingTransfer = false;
-let hasCompletedInitialRender = false;
-let appExperienceMode = "staff";
-let customerScannerStream = null;
-let customerScannerFrame = null;
-let customerScannerActive = false;
-let customerScannerStatus = "Use camera scan or enter a barcode to find a product instantly.";
-let barcodeDetectorPromise = null;
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -53,12 +46,6 @@ function setMessage(text, type = "") {
   box.textContent = text || "";
   box.style.display = text ? "block" : "none";
   if (text) box.classList.add(type || "success");
-}
-
-function hideBrandLoader(delay = 180) {
-  const loader = document.getElementById("brandLoader");
-  if (!loader) return;
-  window.setTimeout(() => loader.classList.add("hidden"), delay);
 }
 
 function authHeaders(extra = {}) {
@@ -88,8 +75,6 @@ const formatInvoiceNumber = bill => bill?.invoiceNumber || `INV-${String(bill?._
 const saveCart = () => localStorage.setItem("pharmacyCart", JSON.stringify(cart));
 const saveCustomer = () => localStorage.setItem("selectedCustomer", JSON.stringify(selectedCustomer));
 const isOwner = () => currentUser?.role === "owner";
-const isCustomerUser = () => currentUser?.role === "customer";
-const isCustomerMode = () => appExperienceMode === "customer";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -161,22 +146,6 @@ function getAllAvailableChoices() {
   return list;
 }
 
-function getBarcodeSearchInput() {
-  return document.getElementById("barcodeSearch");
-}
-
-function getCustomerBarcodeInput() {
-  return document.getElementById("customerBarcodeSearch");
-}
-
-function setBarcodeSearchValue(value) {
-  const nextValue = String(value || "");
-  const billingInput = getBarcodeSearchInput();
-  const customerInput = getCustomerBarcodeInput();
-  if (billingInput) billingInput.value = nextValue;
-  if (customerInput) customerInput.value = nextValue;
-}
-
 function storeFormMemory(payload) {
   formMemory = {
     supplier: payload.supplier || formMemory.supplier || "",
@@ -198,41 +167,6 @@ function applyFormMemoryIfEmpty() {
   const categoryInput = document.getElementById("categoryInput");
   if (supplierInput && !supplierInput.value && formMemory.supplier) supplierInput.value = formMemory.supplier;
   if (categoryInput && !categoryInput.value && formMemory.category) categoryInput.value = formMemory.category;
-}
-
-function applyExperienceMode() {
-  appExperienceMode = "staff";
-  stopCustomerBarcodeScanner();
-
-  document.body.classList.remove("customer-mode");
-  document.body.classList.add("staff-mode");
-  localStorage.setItem("appExperienceMode", appExperienceMode);
-
-  const heroEyebrow = document.getElementById("heroEyebrow");
-  const heroTitle = document.querySelector(".hero-copy h1");
-  const heroDescription = document.getElementById("heroDescription");
-  const billingTitle = document.getElementById("billingTitle");
-  const billingSubtitle = document.getElementById("billingSubtitle");
-  const loaderText = document.getElementById("brandLoaderText");
-  const staffBtn = document.getElementById("staffModeBtn");
-  const customerBtn = document.getElementById("customerModeBtn");
-  const roleLabel = document.getElementById("roleLabel");
-
-  if (heroEyebrow) heroEyebrow.textContent = "Counter Workspace";
-  if (heroTitle) heroTitle.textContent = heroTitle.textContent || "Lumiere de Vie Pharma";
-  if (heroDescription) heroDescription.textContent = "Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.";
-  if (billingTitle) billingTitle.textContent = "Billing Desk";
-  if (billingSubtitle) billingSubtitle.textContent = "Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.";
-  if (loaderText) loaderText.textContent = "Loading inventory, team insights, and live store controls.";
-  if (staffBtn) staffBtn.classList.add("active");
-  if (customerBtn) customerBtn.hidden = true;
-  if (roleLabel && currentUser) roleLabel.textContent = currentUser.role;
-}
-
-function toggleExperienceMode(mode) {
-  appExperienceMode = "staff";
-  applyExperienceMode();
-  renderAll();
 }
 
 function setMedicineSaveState(isSaving) {
@@ -263,7 +197,6 @@ async function loadCurrentUser() {
     localStorage.setItem("activeStoreId", activeStoreId);
   }
   localStorage.setItem("role", currentUser.role);
-  localStorage.setItem("appExperienceMode", "staff");
   document.getElementById("roleLabel").textContent = currentUser.role;
   document.getElementById("activeStoreLabel").textContent = currentUser.storeName || "All Stores";
   document.getElementById("ownerPanel").hidden = !isOwner();
@@ -336,14 +269,9 @@ async function loadData() {
     }
 
     renderAll();
-    if (!hasCompletedInitialRender) {
-      hasCompletedInitialRender = true;
-      hideBrandLoader();
-    }
   } catch (error) {
     document.getElementById("roleLabel").textContent = localStorage.getItem("role") || "Sign in again";
     setMessage(error.message, "error");
-    if (!hasCompletedInitialRender) hideBrandLoader(0);
   } finally {
     isRefreshingData = false;
   }
@@ -663,489 +591,6 @@ function renderInventory() {
   });
 }
 
-function getCustomerTheme(label) {
-  const value = normalize(label);
-  if (value.includes("skin") || value.includes("beauty")) return { tone: "linear-gradient(135deg, #ffe3ee, #fff7fb)", badge: "SK" };
-  if (value.includes("diabetes") || value.includes("bp") || value.includes("heart")) return { tone: "linear-gradient(135deg, #e4f8ff, #f8feff)", badge: "HT" };
-  if (value.includes("pain") || value.includes("fever")) return { tone: "linear-gradient(135deg, #fff2db, #fffaf0)", badge: "RF" };
-  if (value.includes("digest") || value.includes("stomach")) return { tone: "linear-gradient(135deg, #f4ebff, #fcf8ff)", badge: "DG" };
-  return { tone: "linear-gradient(135deg, #e2faf4, #f7fffd)", badge: String(label || "MD").slice(0, 2).toUpperCase() };
-}
-
-function renderProductThumb(label, theme) {
-  return `<div class="product-thumb" style="background:${theme.tone};"><span>${escapeHtml(theme.badge)}</span></div>`;
-}
-
-function syncCustomerSearch(value) {
-  const billingSearch = document.getElementById("billingSearch");
-  const inventorySearch = document.getElementById("searchInput");
-  if (billingSearch) billingSearch.value = value;
-  if (inventorySearch) inventorySearch.value = value;
-  renderAll();
-}
-
-function renderCustomerHeader() {
-  const nav = document.getElementById("customerNavBar");
-  const storeLabel = document.getElementById("customerHeaderStore");
-  const search = document.getElementById("customerSearchBar");
-  if (!nav || !storeLabel || !search) return;
-
-  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
-  storeLabel.textContent = activeStore?.name || currentUser?.storeName || "your nearest store";
-  if (search.value !== document.getElementById("billingSearch")?.value) {
-    search.value = document.getElementById("billingSearch")?.value || "";
-  }
-
-  const topCategories = medicines
-    .map(item => item.category || "General Wellness")
-    .filter((value, index, list) => list.indexOf(value) === index)
-    .slice(0, 6);
-
-  nav.innerHTML = topCategories.map(category => `
-    <button class="customer-nav-link" type="button" onclick="focusCategorySearch('${String(category).replace(/'/g, "\\'")}')">${escapeHtml(category)}</button>
-  `).join("");
-}
-
-function getCustomerFilteredChoices() {
-  const categoryFilter = document.getElementById("customerCategoryFilter")?.value || "all";
-  const typeFilter = document.getElementById("customerTypeFilter")?.value || "all";
-  const sortValue = document.getElementById("customerPriceSort")?.value || "popular";
-  const query = normalize(document.getElementById("billingSearch")?.value || "");
-
-  const filtered = getAllAvailableChoices().filter(item => {
-    const matchesQuery = !query || [item.salt, item.brandName, item.category, item.supplier].some(value => normalize(value).includes(query));
-    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
-    const matchesType = typeFilter === "all" || item.brandType === typeFilter;
-    return matchesQuery && matchesCategory && matchesType;
-  });
-
-  filtered.sort((a, b) => {
-    if (sortValue === "price-low") return a.price - b.price;
-    if (sortValue === "price-high") return b.price - a.price;
-    if (sortValue === "stock") return b.quantity - a.quantity;
-    return b.quantity - a.quantity || a.price - b.price;
-  });
-
-  return filtered;
-}
-
-function resetCustomerCatalog() {
-  const category = document.getElementById("customerCategoryFilter");
-  const type = document.getElementById("customerTypeFilter");
-  const sort = document.getElementById("customerPriceSort");
-  const billingSearch = document.getElementById("billingSearch");
-  const inventorySearch = document.getElementById("searchInput");
-  const customerSearch = document.getElementById("customerSearchBar");
-  if (category) category.value = "all";
-  if (type) type.value = "all";
-  if (sort) sort.value = "popular";
-  if (billingSearch) billingSearch.value = "";
-  if (inventorySearch) inventorySearch.value = "";
-  if (customerSearch) customerSearch.value = "";
-  renderAll();
-}
-
-function renderCustomerBarcodePanel() {
-  const panel = document.getElementById("customerBarcodePanel");
-  if (!panel) return;
-
-  const barcodeValue = getBarcodeSearchInput()?.value || "";
-  const selectedLabel = selectedBillingChoice
-    ? `${selectedBillingChoice.salt} - ${selectedBillingChoice.brandName}`
-    : "No product selected yet";
-  const cameraReady = window.isSecureContext && !!navigator.mediaDevices?.getUserMedia && "BarcodeDetector" in window;
-
-  panel.innerHTML = `
-    <div class="customer-barcode-head">
-      <div>
-        <p class="customer-barcode-kicker">Barcode Help</p>
-        <h3>Scan at the customer side</h3>
-        <p>Use the camera on supported browsers or type the barcode manually if the scanner device sends keyboard input.</p>
-      </div>
-      <div class="product-pill-row">
-        <span class="product-pill">${cameraReady ? "Camera ready" : "Manual entry mode"}</span>
-        <span class="product-pill">${barcodeValue ? `Barcode ${escapeHtml(barcodeValue)}` : "Waiting for barcode"}</span>
-      </div>
-    </div>
-    <div class="customer-barcode-grid">
-      <div class="customer-barcode-card">
-        <label for="customerBarcodeSearch">Barcode</label>
-        <div class="customer-barcode-entry">
-          <input id="customerBarcodeSearch" placeholder="Scan or type barcode" value="${escapeHtml(barcodeValue)}" oninput="syncCustomerBarcode(this.value)" onkeydown="if(event.key==='Enter') handleBarcodeSearch(true)">
-          <button class="btn btn-primary" type="button" onclick="handleBarcodeSearch(true)">Find Product</button>
-        </div>
-        <div class="customer-barcode-actions">
-          <button class="btn btn-soft" type="button" onclick="focusBarcodeSearch()">Focus Barcode</button>
-          <button class="btn btn-soft" type="button" onclick="${customerScannerActive ? "stopCustomerBarcodeScanner('Camera scanner closed.')" : "startCustomerBarcodeScanner()"}">${customerScannerActive ? "Stop Camera" : "Open Camera Scanner"}</button>
-          <button class="btn btn-secondary" type="button" onclick="clearCustomerBarcodeSearch()">Clear</button>
-        </div>
-        <div class="customer-barcode-note">${cameraReady ? "Best on HTTPS or localhost with the rear camera." : "Camera scan needs a secure browser that supports BarcodeDetector. Manual barcode search still works."}</div>
-      </div>
-      <div class="customer-barcode-card">
-        <strong>Matched product</strong>
-        <div class="meta">${escapeHtml(selectedLabel)}</div>
-        <div class="customer-barcode-note">${escapeHtml(customerScannerStatus)}</div>
-        ${customerScannerActive ? `
-          <div class="customer-scanner-shell">
-            <video id="customerBarcodeVideo" autoplay muted playsinline></video>
-          </div>
-        ` : `
-          <div class="customer-scan-placeholder">
-            <strong>${cameraReady ? "Camera idle" : "Manual barcode search"}</strong>
-            <span>${cameraReady ? "Open the scanner and point it at the product barcode." : "Use a scanner gun or type the barcode here to select the medicine."}</span>
-          </div>
-        `}
-      </div>
-    </div>
-  `;
-
-  if (customerScannerActive) attachCustomerScannerVideo();
-}
-
-async function getBarcodeDetector() {
-  if (!("BarcodeDetector" in window)) return null;
-  if (!barcodeDetectorPromise) {
-    barcodeDetectorPromise = (async () => {
-      try {
-        const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
-        const preferredFormats = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "codabar", "itf"];
-        const formats = preferredFormats.filter(format => supportedFormats.includes(format));
-        return new window.BarcodeDetector(formats.length ? { formats } : undefined);
-      } catch (error) {
-        return new window.BarcodeDetector();
-      }
-    })();
-  }
-  return barcodeDetectorPromise;
-}
-
-function attachCustomerScannerVideo() {
-  const video = document.getElementById("customerBarcodeVideo");
-  if (!video || !customerScannerStream) return;
-  if (video.srcObject !== customerScannerStream) video.srcObject = customerScannerStream;
-  const playPromise = video.play();
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(() => {});
-  }
-}
-
-function syncCustomerBarcode(value) {
-  setBarcodeSearchValue(value);
-  renderCustomerBarcodePanel();
-}
-
-function clearCustomerBarcodeSearch() {
-  setBarcodeSearchValue("");
-  customerScannerStatus = "Barcode cleared. Scan again or type a new barcode.";
-  renderBillingFinder();
-  renderCustomerBarcodePanel();
-}
-
-function stopCustomerBarcodeScanner(statusText = "") {
-  customerScannerActive = false;
-  if (customerScannerFrame) {
-    window.cancelAnimationFrame(customerScannerFrame);
-    customerScannerFrame = null;
-  }
-  if (customerScannerStream) {
-    customerScannerStream.getTracks().forEach(track => track.stop());
-    customerScannerStream = null;
-  }
-  if (statusText) customerScannerStatus = statusText;
-  renderCustomerBarcodePanel();
-}
-
-async function scanCustomerBarcode(detector) {
-  if (!customerScannerActive) return;
-  const video = document.getElementById("customerBarcodeVideo");
-
-  if (video && video.readyState >= 2) {
-    try {
-      const results = await detector.detect(video);
-      const rawValue = results?.[0]?.rawValue ? String(results[0].rawValue).trim() : "";
-      if (rawValue) {
-        customerScannerStatus = `Scanned ${rawValue}. Looking up product now.`;
-        setBarcodeSearchValue(rawValue);
-        handleBarcodeSearch(true);
-        stopCustomerBarcodeScanner("Barcode scanned successfully.");
-        return;
-      }
-    } catch (error) {}
-  }
-
-  customerScannerFrame = window.requestAnimationFrame(() => scanCustomerBarcode(detector));
-}
-
-async function startCustomerBarcodeScanner() {
-  if (customerScannerActive) return;
-
-  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-    customerScannerStatus = "Camera scan needs HTTPS or localhost access in a supported browser.";
-    renderCustomerBarcodePanel();
-    setMessage(customerScannerStatus, "error");
-    return;
-  }
-
-  const detector = await getBarcodeDetector();
-  if (!detector) {
-    customerScannerStatus = "This browser does not support built-in barcode detection yet.";
-    renderCustomerBarcodePanel();
-    setMessage(customerScannerStatus, "error");
-    return;
-  }
-
-  try {
-    customerScannerStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      },
-      audio: false
-    });
-    customerScannerActive = true;
-    customerScannerStatus = "Camera opened. Hold the barcode inside the frame.";
-    renderCustomerBarcodePanel();
-    attachCustomerScannerVideo();
-    scanCustomerBarcode(detector);
-  } catch (error) {
-    customerScannerStatus = error?.name === "NotAllowedError"
-      ? "Camera permission was denied. Allow access and try again."
-      : "Unable to open the camera scanner on this device.";
-    renderCustomerBarcodePanel();
-    setMessage(customerScannerStatus, "error");
-  }
-}
-
-function renderCustomerExperience() {
-  const benefitsBox = document.getElementById("customerBenefits");
-  const serviceBox = document.getElementById("customerServiceCards");
-  const categoryBox = document.getElementById("customerCategoryChips");
-  const shelfBox = document.getElementById("customerShelf");
-  const inventoryBox = document.getElementById("customerInventoryList");
-  const catalogHeader = document.getElementById("customerCatalogHeader");
-  const faqBox = document.getElementById("customerFaq");
-  const categoryFilter = document.getElementById("customerCategoryFilter");
-  const filterTags = document.getElementById("customerFilterTags");
-  const assistedPanel = document.getElementById("assistedWorkspacePanel");
-  const barcodePanel = document.getElementById("customerBarcodePanel");
-
-  if (!benefitsBox || !serviceBox || !categoryBox || !shelfBox || !inventoryBox || !catalogHeader || !faqBox || !categoryFilter || !filterTags || !assistedPanel || !barcodePanel) return;
-
-  const choices = getAllAvailableChoices();
-  const categoryMap = medicines.reduce((acc, medicine) => {
-    const category = medicine.category || "General Wellness";
-    if (!acc.has(category)) acc.set(category, { salts: 0, brands: 0 });
-    const entry = acc.get(category);
-    entry.salts += 1;
-    entry.brands += (medicine.brands || []).filter(brand => Number(brand.quantity || 0) > 0).length;
-    return acc;
-  }, new Map());
-
-  const topCategories = Array.from(categoryMap.entries())
-    .sort((a, b) => b[1].brands - a[1].brands)
-    .slice(0, 4);
-
-  const popularItems = Array.from(new Map(
-    choices
-      .slice()
-      .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
-      .slice(0, 6)
-      .map(item => [`${item.medicineId}:${item.brandId}`, item])
-  ).values());
-
-  const availableBrands = choices.length;
-  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
-  const savingsText = selectedCustomer?.isMember
-    ? `${selectedCustomer.membershipDiscountPercent || 0}% member savings ready`
-    : "Membership savings available at the counter";
-
-  renderCustomerHeader();
-
-  const categoryOptions = ['<option value="all">All categories</option>']
-    .concat(Array.from(categoryMap.keys()).sort((a, b) => a.localeCompare(b)).map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`))
-    .join("");
-  if (categoryFilter.innerHTML !== categoryOptions) categoryFilter.innerHTML = categoryOptions;
-
-  const filteredChoices = getCustomerFilteredChoices();
-  const activeCategory = document.getElementById("customerCategoryFilter")?.value || "all";
-  const activeType = document.getElementById("customerTypeFilter")?.value || "all";
-  const activeSort = document.getElementById("customerPriceSort")?.value || "popular";
-  const query = document.getElementById("billingSearch")?.value?.trim() || "";
-  const headingLabel = activeCategory !== "all" ? activeCategory : query ? query : "Health concerns";
-  const querySentence = query
-    ? `Showing customer-ready products that match "${escapeHtml(query)}".`
-    : "Browse medicines by category, compare trusted brands, and help shoppers choose the right option faster.";
-
-  catalogHeader.innerHTML = `
-    <div class="customer-breadcrumbs"><span>Home</span> &rsaquo; Medicines &rsaquo; ${escapeHtml(headingLabel)}</div>
-    <h2>${escapeHtml(headingLabel)} Medicines</h2>
-    <p>${querySentence}</p>
-  `;
-
-  filterTags.innerHTML = [
-    activeCategory !== "all" ? activeCategory : "All categories",
-    activeType !== "all" ? activeType : "All products",
-    activeSort === "popular" ? "Popular first" : activeSort === "price-low" ? "Lowest price first" : activeSort === "price-high" ? "Highest price first" : "Highest stock first"
-  ].map(tag => `<span class="customer-filter-tag">${escapeHtml(tag)}</span>`).join("");
-
-  assistedPanel.innerHTML = `
-    <div class="assisted-workspace-head">
-      <div>
-        <h3>Assisted Workspace</h3>
-        <p>Customer sees a clean storefront while the pharmacist still gets fast operational context for the same interaction.</p>
-      </div>
-      <div class="product-pill-row">
-        <span class="product-pill">Source: in-store</span>
-        <span class="product-pill">Context: staff controlled</span>
-      </div>
-    </div>
-    <div class="assisted-workspace-grid">
-      <div class="assisted-card">
-        <strong>Customer lookup</strong>
-        <div class="meta">${selectedCustomer?.phone ? `${escapeHtml(selectedCustomer.name || "Customer")} | ${escapeHtml(selectedCustomer.phone)}` : "No customer linked yet"}</div>
-      </div>
-      <div class="assisted-card">
-        <strong>Current cart</strong>
-        <div class="meta">${cart.length} items | ${cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} units</div>
-      </div>
-      <div class="assisted-card">
-        <strong>Store status</strong>
-        <div class="meta">${escapeHtml(activeStore?.name || currentUser?.storeName || "Main store")} | ${filteredChoices.length} matching products</div>
-      </div>
-    </div>
-  `;
-
-  renderCustomerBarcodePanel();
-
-  benefitsBox.innerHTML = [
-    {
-      label: "Available today",
-      value: `${availableBrands}+`,
-      detail: "medicine options ready to discover and bill right now"
-    },
-    {
-      label: "Fast help",
-      value: "Counter guided",
-      detail: "a pharmacist or staff member can help compare options instantly"
-    },
-    {
-      label: "Member savings",
-      value: selectedCustomer?.isMember ? "Savings active" : "Ask today",
-      detail: savingsText
-    }
-  ].map(item => `
-    <div class="customer-benefit-card">
-      <p>${escapeHtml(item.label)}</p>
-      <strong>${escapeHtml(item.value)}</strong>
-      <span>${escapeHtml(item.detail)}</span>
-    </div>
-  `).join("");
-
-  serviceBox.innerHTML = [
-    {
-      tone: "primary",
-      title: "Order from prescription",
-      body: "Upload or read out the prescription at the counter and let the staff quickly search the right medicines for you."
-    },
-    {
-      tone: "secondary",
-      title: "No prescription?",
-      body: "Browse by health concern, compare options, and ask staff to guide you toward suitable OTC products."
-    },
-    {
-      tone: "accent",
-      title: "Membership & repeat orders",
-      body: `Save time on repeat purchases with phone-based lookup at ${activeStore?.name || "this store"} and faster checkout for regular customers.`
-    }
-  ].map(item => `
-    <div class="customer-service-card ${item.tone}">
-      <h3>${escapeHtml(item.title)}</h3>
-      <p>${escapeHtml(item.body)}</p>
-    </div>
-  `).join("");
-
-  categoryBox.innerHTML = topCategories.length
-    ? topCategories.map(([category, info]) => `
-      <button class="customer-category-chip" type="button" onclick="focusCategorySearch('${String(category).replace(/'/g, "\\'")}')">
-        ${renderProductThumb(category, getCustomerTheme(category))}
-        <strong>${escapeHtml(category)}</strong>
-        <div class="meta">${info.salts} salts | ${info.brands} available brands</div>
-      </button>
-    `).join("")
-    : '<p class="empty">Add medicines to highlight customer-ready categories.</p>';
-
-  shelfBox.innerHTML = popularItems.length
-    ? popularItems.map(item => `
-      <div class="customer-shelf-card">
-        ${renderProductThumb(item.brandName, getCustomerTheme(item.category))}
-        <strong>${escapeHtml(item.salt)} - ${escapeHtml(item.brandName)}</strong>
-        <div class="meta">${escapeHtml(item.category)} | ${escapeHtml(item.brandType)} | ${formatAmount(item.price)}</div>
-        <div class="product-pill-row">
-          <span class="product-pill">${item.quantity} in stock</span>
-          <span class="product-pill">${escapeHtml(item.brandType)}</span>
-        </div>
-        <div class="actions-row" style="margin-top:12px;">
-          <button class="btn btn-soft" type="button" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">View</button>
-          <button class="btn btn-primary" type="button" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add ${quickQuantityValue}</button>
-        </div>
-      </div>
-    `).join("")
-    : '<p class="empty">No customer-ready products are available yet.</p>';
-
-  inventoryBox.innerHTML = filteredChoices.length
-    ? `
-      <div class="customer-results-head">
-        <strong>Showing ${filteredChoices.length} products for ${escapeHtml(headingLabel)}</strong>
-        <div class="customer-sort-pill">Sort by: ${escapeHtml(activeSort === "popular" ? "Popularity" : activeSort === "price-low" ? "Price Low to High" : activeSort === "price-high" ? "Price High to Low" : "Stock availability")}</div>
-      </div>
-      <div class="customer-result-grid">${filteredChoices.slice(0, 12).map(item => {
-        const theme = getCustomerTheme(item.category || item.salt);
-        const oldPrice = item.price * 1.18;
-        const discount = Math.max(5, Math.round(((oldPrice - item.price) / oldPrice) * 100));
-        return `
-          <div class="customer-product-card">
-            ${renderProductThumb(item.brandName, theme)}
-            <h3>${escapeHtml(item.brandName)}</h3>
-            <div class="customer-product-meta">${escapeHtml(item.salt)} | ${escapeHtml(item.category)}</div>
-            <div class="customer-product-meta">${escapeHtml(item.supplier || "Trusted supplier")} | ${item.quantity} in stock</div>
-            <div class="customer-price-line">
-              <strong>${formatAmount(item.price)}</strong>
-              <span>${discount}% OFF</span>
-            </div>
-            <div class="customer-product-meta"><s>${formatAmount(oldPrice)}</s> | ${escapeHtml(item.brandType)}</div>
-            <div class="customer-delivery-note">Available today at ${escapeHtml(activeStore?.name || currentUser?.storeName || "your store")}</div>
-            <div class="product-pill-row">
-              <span class="product-pill">${escapeHtml(item.brandType)}</span>
-              <span class="product-pill">${escapeHtml(item.category)}</span>
-            </div>
-            <div class="actions-row" style="margin-top:12px;">
-              <button class="btn btn-soft" type="button" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">View</button>
-              <button class="btn btn-primary" type="button" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add</button>
-            </div>
-          </div>
-        `;
-      }).join("")}</div>
-    `
-    : '<p class="empty">No medicines match the current filters. Try another category or clear the search.</p>';
-
-  faqBox.innerHTML = `
-    <h3>Frequently Asked Questions</h3>
-    <div class="customer-faq-item">
-      <strong>Can I switch from a branded medicine to a generic?</strong>
-      <p>Generics may contain the same active ingredient, but it is best to confirm the right option with the pharmacist before billing.</p>
-    </div>
-    <div class="customer-faq-item">
-      <strong>How do I choose the right dosage?</strong>
-      <p>Dosage depends on age, symptoms, and existing prescriptions. Ask the pharmacist before adding it to the cart if you are unsure.</p>
-    </div>
-    <div class="customer-faq-item">
-      <strong>Do I need a prescription?</strong>
-      <p>Prescription medicines should only be billed when a valid prescription is available. OTC products can be selected directly from the storefront.</p>
-    </div>
-  `;
-}
-
 function renderAlerts() {
   const container = document.getElementById("alertPanel");
   const alerts = [];
@@ -1450,15 +895,14 @@ function renderSelectedMedicineCard() {
     expiryDate: selectedBillingChoice.expiryDate
   });
   const expiry = selectedBillingChoice.expiryDate ? formatDate(selectedBillingChoice.expiryDate) : "N/A";
-  const isCustomerFacing = isCustomerMode();
 
   box.innerHTML = `
     <strong>${escapeHtml(selectedBillingChoice.salt)} - ${escapeHtml(selectedBillingChoice.brandName)}</strong>
-    <div class="meta">${escapeHtml(selectedBillingChoice.brandType)} | ${formatAmount(selectedBillingChoice.price)} | ${isCustomerFacing ? `${selectedBillingChoice.quantity} ready now` : `Stock ${selectedBillingChoice.quantity}`}</div>
-    <div class="meta">${isCustomerFacing ? `Category ${escapeHtml(selectedBillingChoice.category)} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}` : `Batch ${escapeHtml(selectedBillingChoice.batchNumber || "N/A")} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}`}</div>
+    <div class="meta">${escapeHtml(selectedBillingChoice.brandType)} | Stock ${selectedBillingChoice.quantity} | Sell ${formatAmount(selectedBillingChoice.price)} | Supplier ${escapeHtml(selectedBillingChoice.supplier)}</div>
+    <div class="meta">Batch ${escapeHtml(selectedBillingChoice.batchNumber || "N/A")} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}</div>
     <div class="chip-row" style="margin-top:12px;">
       <span class="tag ${state.level === "healthy" ? "good" : state.level === "low-stock" ? "low" : "warn"}">${escapeHtml(state.text)}</span>
-      <span class="tag info">${isCustomerFacing ? "Ready for cart" : "Counter ready"}</span>
+      <span class="tag info">Counter ready</span>
     </div>
   `;
 }
@@ -1485,9 +929,9 @@ function renderBillingFinder() {
     <div class="suggestion-card">
       <strong>${escapeHtml(item.salt)} - ${escapeHtml(item.brandName)}</strong>
       <div class="meta">${escapeHtml(item.category)} | ${escapeHtml(item.brandType)} | ${item.quantity} in stock | ${formatAmount(item.price)}</div>
-      <div class="meta">${isCustomerMode() ? `Ready for quick billing | Barcode ${escapeHtml(item.barcode || "N/A")}` : `Barcode ${escapeHtml(item.barcode || "N/A")} | Supplier ${escapeHtml(item.supplier)}`}</div>
+      <div class="meta">Barcode ${escapeHtml(item.barcode || "N/A")} | Supplier ${escapeHtml(item.supplier)}</div>
       <div class="suggestion-actions" style="margin-top:12px;">
-        <button class="btn btn-soft" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">${isCustomerMode() ? "View" : "Select"}</button>
+        <button class="btn btn-soft" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">Select</button>
         <button class="btn btn-primary" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add ${quickQuantityValue}</button>
       </div>
     </div>
@@ -1542,10 +986,9 @@ function selectBillingMedicine(medicineId, brandId, focusQty = false) {
   document.getElementById("billSalt").value = medicineId;
   loadBillBrands(brandId);
   document.getElementById("billingSearch").value = `${selectedBillingChoice.salt} ${selectedBillingChoice.brandName}`;
-  setBarcodeSearchValue(selectedBillingChoice.barcode || "");
+  document.getElementById("barcodeSearch").value = selectedBillingChoice.barcode || "";
   if (!document.getElementById("billQty").value) document.getElementById("billQty").value = String(quickQuantityValue);
   renderBillingFinder();
-  renderCustomerBarcodePanel();
 
   if (focusQty) {
     document.getElementById("billQty").focus();
@@ -1554,8 +997,7 @@ function selectBillingMedicine(medicineId, brandId, focusQty = false) {
 }
 
 function handleBarcodeSearch(strict = true) {
-  const value = normalize(getBarcodeSearchInput()?.value);
-  renderCustomerBarcodePanel();
+  const value = normalize(document.getElementById("barcodeSearch").value);
   if (!value) {
     renderBillingFinder();
     return;
@@ -1580,13 +1022,9 @@ function renderCart() {
   const box = document.getElementById("cartBox");
   const dock = document.getElementById("cartDock");
   document.getElementById("cartCount").textContent = String(cart.length);
-  const customerCartCount = document.getElementById("customerCartCount");
-  if (customerCartCount) customerCartCount.textContent = String(cart.length);
-  const cartTitle = isCustomerMode() ? "Shopping Summary" : "Cart Summary";
-  const checkoutLabel = isCustomerMode() ? "Continue To Checkout" : "Open Checkout";
 
   if (!cart.length) {
-    box.innerHTML = `<h3 style="margin-top:0;">${cartTitle}</h3><p class="empty">${isCustomerMode() ? "No medicines added yet. Search or browse to start building the order." : "Your cart is empty."}</p>`;
+    box.innerHTML = '<h3 style="margin-top:0;">Cart</h3><p class="empty">Your cart is empty.</p>';
     dock.className = "cart-dock";
     dock.innerHTML = "";
     return;
@@ -1599,7 +1037,7 @@ function renderCart() {
   const finalTotal = Math.max(0, total - discountAmount);
 
   box.innerHTML = `
-    <h3 style="margin-top:0;">${cartTitle}</h3>
+    <h3 style="margin-top:0;">Cart Summary</h3>
     <div class="cart-list">
       ${cart.map((item, index) => `
         <div class="cart-item">
@@ -1612,10 +1050,10 @@ function renderCart() {
       `).join("")}
     </div>
     <div class="modal-header"><strong>Subtotal</strong><strong>${formatAmount(total)}</strong></div>
-    <div class="modal-header"><strong>${isCustomerMode() ? "Savings" : "Discount"}</strong><strong>${formatAmount(discountAmount)}</strong></div>
+    <div class="modal-header"><strong>Discount</strong><strong>${formatAmount(discountAmount)}</strong></div>
     <div class="modal-header"><strong>Total</strong><strong>${formatAmount(finalTotal)}</strong></div>
     <div class="actions-row" style="margin-top:16px;">
-      <button class="btn btn-primary" onclick="goToCheckout()">${checkoutLabel}</button>
+      <button class="btn btn-primary" onclick="goToCheckout()">Open Checkout</button>
       <button class="btn btn-secondary" onclick="clearCart()">Clear Cart</button>
     </div>
   `;
@@ -1629,7 +1067,7 @@ function renderCart() {
     </div>
     <div class="actions-row">
       <button class="btn btn-soft" onclick="toggleCart()">View Cart</button>
-      <button class="btn btn-primary" onclick="goToCheckout()">${isCustomerMode() ? "Checkout" : "Open Checkout"}</button>
+      <button class="btn btn-primary" onclick="goToCheckout()">Checkout</button>
     </div>
   `;
 }
@@ -1689,9 +1127,7 @@ function updateMembershipUi() {
   const discountInput = document.getElementById("memberDiscount");
 
   if (!selectedCustomer) {
-    status.textContent = isCustomerMode()
-      ? "Add a phone number to check membership savings, or continue as a walk-in shopper."
-      : "No customer selected. Continue as walk-in or search by phone.";
+    status.textContent = "No customer selected. Continue as walk-in or search by phone.";
     phoneInput.value = "";
     nameInput.value = "";
     discountInput.value = "0";
@@ -1702,10 +1138,8 @@ function updateMembershipUi() {
   nameInput.value = selectedCustomer.name || "";
   discountInput.value = String(Number(selectedCustomer.membershipDiscountPercent || 0));
   status.textContent = selectedCustomer.isMember
-    ? `${selectedCustomer.name || "Customer"} is a member | ${selectedCustomer.phone} | Savings ${selectedCustomer.membershipDiscountPercent || 0}%`
-    : isCustomerMode()
-      ? `Customer found at ${selectedCustomer.phone} | not enrolled in membership yet`
-      : `Non-member customer: ${selectedCustomer.phone}`;
+    ? `Member found: ${selectedCustomer.name || "Customer"} | ${selectedCustomer.phone} | Discount ${selectedCustomer.membershipDiscountPercent || 0}%`
+    : `Non-member customer: ${selectedCustomer.phone}`;
 }
 
 async function lookupCustomer() {
@@ -1802,20 +1236,15 @@ async function saveMember() {
 
 function goToCheckout() {
   if (!cart.length) return setMessage("Cart is empty.", "error");
-  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
-  const checkoutCustomer = selectedCustomer || {
+  localStorage.removeItem("paymentSessionId");
+  localStorage.removeItem("paymentMethod");
+  localStorage.setItem("pendingCheckoutCart", JSON.stringify(cart));
+  localStorage.setItem("pendingCustomer", JSON.stringify(selectedCustomer || {
     phone: String(document.getElementById("customerPhone")?.value || "").replace(/\D/g, ""),
     name: document.getElementById("customerName")?.value?.trim() || "",
     isMember: false,
     membershipDiscountPercent: Number(document.getElementById("memberDiscount")?.value || 0) || 0
-  };
-  localStorage.removeItem("paymentSessionId");
-  localStorage.removeItem("paymentMethod");
-  localStorage.setItem("pendingOrderSource", "in_store");
-  localStorage.setItem("pendingCustomerContext", "staff_controlled");
-  localStorage.setItem("pendingCheckoutCart", JSON.stringify(cart));
-  localStorage.setItem("pendingCustomer", JSON.stringify(checkoutCustomer));
-  localStorage.removeItem("pendingStore");
+  }));
   window.location.href = "checkout.html";
 }
 
@@ -2121,28 +1550,10 @@ async function deleteMedicine(medicineId, medicineName) {
 }
 
 function printInvoice(billId) {
-  const localBill = bills.find(item => item._id === billId) || allBills.find(item => item._id === billId);
-  if (localBill) {
-    openInvoiceWindow(localBill);
-    return;
-  }
+  const bill = bills.find(item => item._id === billId);
+  if (!bill) return setMessage("Bill not found.", "error");
 
-  fetchJson(`/bills/${billId}`)
-    .then(data => {
-      if (!data.bill) throw new Error("Bill not found.");
-      openInvoiceWindow(data.bill);
-    })
-    .catch(error => {
-      setMessage(error.message || "Bill not found.", "error");
-    });
-}
-
-function openInvoiceWindow(bill) {
   const win = window.open("", "_blank", "width=900,height=700");
-  if (!win) {
-    setMessage("Popup blocked. Please allow popups to print the invoice.", "error");
-    return;
-  }
   win.document.write(`
     <html>
       <head>
@@ -2187,7 +1598,6 @@ function openInvoiceWindow(bill) {
 }
 
 async function logout() {
-  stopCustomerBarcodeScanner();
   try {
     await fetchJson("/users/logout", { method: "POST" });
   } catch (error) {}
@@ -2227,31 +1637,8 @@ function focusBillingSearch() {
   document.getElementById("billingSearch").focus();
 }
 
-function focusCustomerSearch() {
-  document.getElementById("billingSearch").scrollIntoView({ behavior: "smooth", block: "center" });
-  document.getElementById("billingSearch").focus();
-}
-
-function focusCustomerMembership() {
-  document.getElementById("customerPhone").scrollIntoView({ behavior: "smooth", block: "center" });
-  document.getElementById("customerPhone").focus();
-}
-
-function focusCategorySearch(category) {
-  document.getElementById("billingSearch").value = category;
-  document.getElementById("searchInput").value = category;
-  const customerSearch = document.getElementById("customerSearchBar");
-  if (customerSearch) customerSearch.value = category;
-  renderAll();
-  focusCustomerSearch();
-}
-
 function focusBarcodeSearch() {
-  const billingInput = getBarcodeSearchInput();
-  if (billingInput) {
-    billingInput.focus();
-    billingInput.select();
-  }
+  document.getElementById("barcodeSearch").focus();
 }
 
 function scrollToOwnerPanel() {
@@ -2274,15 +1661,6 @@ function wireEvents() {
     renderSelectedMedicineCard();
   });
 
-  document.getElementById("billingSearch").addEventListener("input", event => {
-    const value = event.target.value;
-    const customerSearch = document.getElementById("customerSearchBar");
-    const inventorySearch = document.getElementById("searchInput");
-    if (customerSearch && customerSearch.value !== value) customerSearch.value = value;
-    if (inventorySearch && inventorySearch.value !== value) inventorySearch.value = value;
-    if (isCustomerMode()) renderCustomerExperience();
-  });
-
   document.getElementById("billQty").addEventListener("keydown", event => {
     if (event.key === "Enter") addToCart();
   });
@@ -2300,11 +1678,9 @@ function wireEvents() {
 }
 
 function renderAll() {
-  applyExperienceMode();
   updateStats();
   renderStoreControls();
   renderInventory();
-  renderCustomerExperience();
   renderAlerts();
   renderProfiles();
   renderTopSelling();
@@ -2325,7 +1701,6 @@ function renderAll() {
 }
 
 wireEvents();
-applyExperienceMode();
 setQuickQuantity(1);
 loadData();
 startAutoRefresh();

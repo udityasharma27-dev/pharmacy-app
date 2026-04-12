@@ -3,280 +3,529 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#1db9ad">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Lumière de Vie Pharma Login</title>
+  <title>Lumiere de Vie Pharma</title>
   <link rel="manifest" href="manifest.webmanifest">
   <style>
     :root {
-      --bg: #f5eee5;
-      --card: rgba(255, 251, 246, 0.92);
-      --text: #231815;
-      --muted: #74655f;
-      --primary: #9d6b3f;
-      --primary-dark: #7e512b;
-      --danger: #a53d4b;
-      --shadow: 0 28px 75px rgba(68, 42, 24, 0.16);
+      --teal: #20b8ac;
+      --teal-deep: #0f877f;
+      --teal-dark: #0d6f69;
+      --sand: #fff4ce;
+      --ink: #0f172a;
+      --muted: #5b6475;
+      --surface: #ffffff;
+      --line: rgba(148, 163, 184, 0.2);
+      --soft: #f8fbfc;
+      --shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: #f5f8fb;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: linear-gradient(180deg, var(--teal) 0%, #22c7b8 100%);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+    .topbar-inner,
+    .nav-inner,
+    .shell {
+      width: min(1320px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .topbar-inner {
+      display: grid;
+      grid-template-columns: auto auto minmax(260px, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 12px 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: #063c39;
+    }
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, var(--teal-dark), #083c39);
+      color: white;
+      font-weight: 900;
       display: grid;
       place-items: center;
-      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(157, 107, 63, 0.16), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(47, 111, 115, 0.14), transparent 26%),
-        linear-gradient(180deg, #fbf6ef 0%, var(--bg) 48%, #fffdfa 100%);
-      padding: 18px;
+    }
+    .brand strong,
+    .brand span { display: block; }
+    .brand strong { font-size: 21px; }
+    .brand span,
+    .deliver {
+      color: rgba(6, 60, 57, 0.82);
+      font-size: 13px;
+    }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.96);
+    }
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .header-btn,
+    .nav-pill,
+    .cta,
+    .mini-btn {
+      border: 0;
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .header-btn {
+      border-radius: 999px;
+      padding: 11px 15px;
+      background: rgba(8, 61, 60, 0.16);
+      color: #083d3c;
+    }
+    .nav {
+      background: #0d7a73;
+    }
+    .nav-inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 0;
+    }
+    .nav-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
     }
     .shell {
-      width: min(1080px, 100%);
+      padding: 22px 0 60px;
+    }
+    .hero {
       display: grid;
-      grid-template-columns: 1.15fr 0.95fr;
-      background: var(--card);
-      border-radius: 30px;
-      overflow: hidden;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    .hero-banner {
+      padding: 34px;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.28), transparent 24%),
+        linear-gradient(135deg, var(--sand) 0%, #ffe0a3 54%, #ffd0a8 100%);
       box-shadow: var(--shadow);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      backdrop-filter: blur(12px);
-    }
-    .promo {
-      padding: 42px;
-      color: white;
-      background: linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
-      display: grid;
-      align-content: space-between;
-      min-height: 620px;
-    }
-    .promo h1 { margin: 0; font-size: clamp(34px, 5vw, 56px); line-height: 1; }
-    .promo p { color: rgba(255, 255, 255, 0.82); font-size: 15px; max-width: 420px; }
-    .feature-list { display: grid; gap: 14px; }
-    .feature {
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-    }
-    .feature strong { display: block; margin-bottom: 4px; }
-    .form-wrap {
-      padding: 42px 34px;
-      background: rgba(255, 255, 255, 0.86);
-      display: grid;
-      align-content: center;
     }
     .eyebrow {
       display: inline-flex;
-      width: fit-content;
       padding: 8px 12px;
       border-radius: 999px;
-      background: #f8eee4;
-      color: #7e512b;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    .form-wrap h2 { margin: 0 0 8px; font-size: 32px; }
-    .sub { margin: 0 0 22px; color: var(--muted); }
-    .field { display: grid; gap: 8px; margin-bottom: 16px; }
-    .field label { color: var(--muted); font-size: 13px; font-weight: 700; }
-    .field small { color: var(--muted); font-size: 12px; line-height: 1.4; }
-    input {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.38);
-      font-size: 15px;
-      outline: none;
-      background: rgba(255, 255, 255, 0.96);
-    }
-    input:focus {
-      border-color: rgba(157, 107, 63, 0.56);
-      box-shadow: 0 0 0 4px rgba(157, 107, 63, 0.1);
-    }
-    button {
-      width: 100%;
-      border: 0;
-      border-radius: 16px;
-      padding: 14px 18px;
-      background: var(--primary);
-      color: white;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 0.18s ease, background 0.18s ease;
-    }
-    button:hover { transform: translateY(-1px); background: var(--primary-dark); }
-    .message { min-height: 24px; margin-top: 14px; font-weight: 700; color: var(--danger); }
-    .helper {
-      margin-top: 18px;
-      padding: 16px;
-      border-radius: 18px;
-      background: #fcf7f1;
-      color: var(--muted);
-      font-size: 14px;
-    }
-    .helper strong { color: var(--text); }
-    .install {
-      margin-top: 14px;
-      display: flex;
-      justify-content: flex-start;
-    }
-    .install button {
-      width: auto;
-      background: #f8eee4;
-      color: #7e512b;
-    }
-    .brand-loader {
-      position: fixed;
-      inset: 0;
-      z-index: 999;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      background:
-        radial-gradient(circle at top left, rgba(157, 107, 63, 0.18), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(47, 111, 115, 0.16), transparent 28%),
-        linear-gradient(180deg, #fbf6ef 0%, var(--bg) 46%, #fffdfa 100%);
-      transition: opacity 0.35s ease, visibility 0.35s ease;
-    }
-    .brand-loader.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-    .brand-loader-card {
-      width: min(460px, 100%);
-      padding: 34px 28px;
-      border-radius: 28px;
-      background: rgba(255, 251, 246, 0.94);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: var(--shadow);
-      text-align: center;
-    }
-    .brand-loader-mark {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 18px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-size: 28px;
+      background: rgba(255, 255, 255, 0.6);
+      color: #9a5d17;
+      font-size: 12px;
       font-weight: 900;
-      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .brand-loader-card h2 {
+    .hero-banner h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(38px, 5vw, 60px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+    .hero-banner p {
       margin: 0;
-      font-size: 28px;
-    }
-    .brand-loader-card p {
-      margin: 10px 0 0;
-      color: var(--muted);
+      max-width: 58ch;
+      color: #684d2f;
       line-height: 1.6;
     }
-    .brand-loader-bar {
-      width: 100%;
-      height: 8px;
-      margin-top: 20px;
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+    .cta {
       border-radius: 999px;
-      background: #f0e4d7;
-      overflow: hidden;
+      padding: 14px 20px;
+      font-size: 14px;
     }
-    .brand-loader-bar span {
-      display: block;
-      width: 42%;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #9d6b3f, #2f6f73);
-      animation: loader-slide 1.1s ease-in-out infinite alternate;
+    .cta-primary {
+      background: linear-gradient(180deg, #24c6b8, var(--teal));
+      color: white;
     }
-    @keyframes loader-slide {
-      from { transform: translateX(-18%); }
-      to { transform: translateX(138%); }
+    .cta-secondary {
+      background: white;
+      color: var(--teal-dark);
     }
-    @media (max-width: 920px) {
-      .shell { grid-template-columns: 1fr; }
-      .promo { min-height: auto; padding: 30px; }
-      .form-wrap { padding: 30px 24px; }
+    .login-card {
+      padding: 26px;
+      border-radius: 28px;
+      background: white;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      display: grid;
+      align-content: start;
+      gap: 14px;
+    }
+    .login-card h2 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: -0.04em;
+    }
+    .login-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+    .field label {
+      font-size: 13px;
+      font-weight: 800;
+      color: #475569;
+    }
+    .field input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      outline: none;
+      font-size: 14px;
+    }
+    .field input:focus {
+      border-color: rgba(32, 184, 172, 0.65);
+      box-shadow: 0 0 0 4px rgba(32, 184, 172, 0.12);
+    }
+    .login-btn {
+      width: 100%;
+      border-radius: 16px;
+      padding: 14px 18px;
+      background: linear-gradient(180deg, #24c6b8, var(--teal));
+      color: white;
+      font-size: 15px;
+    }
+    .guest-link {
+      display: inline-flex;
+      justify-content: center;
+      border-radius: 16px;
+      padding: 13px 16px;
+      background: #edf8f7;
+      color: var(--teal-dark);
+      text-decoration: none;
+      font-weight: 800;
+    }
+    .message {
+      min-height: 20px;
+      color: #c0265d;
+      font-weight: 700;
+    }
+    .service-grid,
+    .category-grid,
+    .product-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .service-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .service-card,
+    .category-card,
+    .product-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .service-card { padding: 20px; }
+    .service-card h3,
+    .section-head h2,
+    .category-card strong,
+    .product-card h3 {
+      margin: 0;
+    }
+    .service-card p,
+    .category-card p,
+    .product-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: 28px;
+    }
+    .section-head h2 {
+      font-size: 30px;
+      letter-spacing: -0.04em;
+    }
+    .mini-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #edf8f7;
+      color: var(--teal-dark);
+    }
+    .category-card,
+    .product-card {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .visual {
+      min-height: 148px;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+      font-weight: 900;
+      color: #0f172a;
+      background: linear-gradient(135deg, #ddf8f5, #f7fffd);
+    }
+    .visual.skin { background: linear-gradient(135deg, #ffe4ef, #fff8fb); }
+    .visual.digest { background: linear-gradient(135deg, #f2eaff, #fcf8ff); }
+    .visual.relief { background: linear-gradient(135deg, #fff1d7, #fffaf1); }
+    .price-line {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .price-line strong {
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+    .price-line span {
+      color: #e11d8d;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #edf8f7;
+      color: var(--teal-dark);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    @media (max-width: 1100px) {
+      .topbar-inner,
+      .hero,
+      .service-grid,
+      .category-grid,
+      .product-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 760px) {
+      .topbar-inner,
+      .nav-inner,
+      .shell {
+        width: min(100%, calc(100% - 24px));
+      }
+      .hero-banner,
+      .login-card {
+        padding: 20px;
+      }
+      .hero-banner h1 {
+        font-size: 38px;
+      }
+      .section-head h2 {
+        font-size: 26px;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="brandLoader" class="brand-loader">
-    <div class="brand-loader-card">
-      <div class="brand-loader-mark">LV</div>
-      <h2>Lumière de Vie Pharma</h2>
-      <p>Preparing your pharmacy workspace and secure sign-in.</p>
-      <div class="brand-loader-bar"><span></span></div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">LV</div>
+        <div>
+          <strong>Lumiere de Vie</strong>
+          <span>Pharmacy storefront</span>
+        </div>
+      </div>
+      <div class="deliver">Deliver to Delhi, 110001</div>
+      <label class="search">
+        <span>Search</span>
+        <input placeholder="Search medicines, wellness, personal care and daily essentials">
+      </label>
+      <div class="header-actions">
+        <button class="header-btn" type="button" onclick="window.location.href='app.html'">Browse store</button>
+        <button class="header-btn" type="button" onclick="document.getElementById('user').focus()">Staff sign in</button>
+      </div>
     </div>
-  </div>
-  <div class="shell">
-    <section class="promo">
-      <div>
-        <h1>Lumière de Vie Pharma</h1>
-        <p>Bring a refined, modern pharmacy experience to the counter with premium inventory control, guided billing, patient loyalty, and staff performance visibility.</p>
+    <div class="nav">
+      <div class="nav-inner">
+        <button class="nav-pill" type="button">All Categories</button>
+        <button class="nav-pill" type="button">Medicine</button>
+        <button class="nav-pill" type="button">Lab Tests</button>
+        <button class="nav-pill" type="button">Beauty</button>
+        <button class="nav-pill" type="button">Wellness</button>
+        <button class="nav-pill" type="button">Health Corner</button>
+        <button class="nav-pill" type="button">Offers</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-banner">
+        <div class="eyebrow">Summer Wellness Savings</div>
+        <h1>Shop smarter for everyday care and pharmacy essentials.</h1>
+        <p>Make the store feel more like a modern health marketplace. Customers can browse by concern, compare products quickly, and move to checkout with guided staff support.</p>
+        <div class="hero-actions">
+          <button class="cta cta-primary" type="button" onclick="window.location.href='app.html'">Open customer storefront</button>
+          <button class="cta cta-secondary" type="button" onclick="document.getElementById('user').focus()">Staff login</button>
+        </div>
       </div>
 
-      <div class="feature-list">
-        <div class="feature">
-          <strong>Curated Inventory</strong>
-          Search medicines, manage stock, track batches, and keep shelves beautifully organized.
+      <aside class="login-card">
+        <div class="eyebrow">Staff Access</div>
+        <h2>Sign in to manage the store</h2>
+        <p>Customers should browse the storefront. Use this panel only for pharmacy staff and owners.</p>
+
+        <div class="field">
+          <label for="user">Username</label>
+          <input id="user" placeholder="Enter username">
         </div>
-        <div class="feature">
-          <strong>Elegant Billing</strong>
-          Create invoices quickly, review history, and serve patients with a smoother checkout flow.
+
+        <div class="field">
+          <label for="pass">Password</label>
+          <input id="pass" type="password" placeholder="Enter password">
         </div>
-        <div class="feature">
-          <strong>Operational Insight</strong>
-          Monitor suppliers, expiry dates, staff performance, and daily profit from one refined workspace.
-        </div>
-      </div>
+
+        <button id="loginBtn" class="login-btn" onclick="login()">Login to dashboard</button>
+        <a class="guest-link" href="app.html">Continue to storefront</a>
+        <p id="message" class="message"></p>
+      </aside>
     </section>
 
-    <section class="form-wrap">
-      <div class="eyebrow">Secure Sign In</div>
-      <h2>Welcome back</h2>
-      <p class="sub">Use your pharmacy account to open the dashboard.</p>
-
-      <div class="field">
-        <label for="user">Username</label>
-        <input id="user" placeholder="Enter username">
-      </div>
-
-      <div class="field">
-        <label for="pass">Password</label>
-        <input id="pass" type="password" placeholder="Enter password">
-      </div>
-
-      <button id="loginBtn" onclick="login()">Login To Dashboard</button>
-      <p id="message" class="message"></p>
-      <div class="install">
-        <button type="button" data-install-app hidden onclick="installPharmacyApp()">Install On Phone</button>
-      </div>
-
+    <section class="service-grid">
+      <article class="service-card">
+        <h3>Order using prescription</h3>
+        <p>Bring the prescription to the counter and let staff quickly find and bill the right medicines.</p>
+      </article>
+      <article class="service-card">
+        <h3>No prescription?</h3>
+        <p>Browse by concern and compare wellness or OTC products with pharmacist guidance.</p>
+      </article>
+      <article class="service-card">
+        <h3>Membership and repeat orders</h3>
+        <p>Use phone-based lookup for faster repeat purchases, savings, and smoother checkout.</p>
+      </article>
     </section>
-  </div>
+
+    <div class="section-head">
+      <h2>Shop by health concern</h2>
+      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">View all</button>
+    </div>
+    <section class="category-grid">
+      <article class="category-card">
+        <div class="visual relief">PF</div>
+        <strong>Pain Relief</strong>
+        <p>Quick access to fever, body pain, and daily relief essentials.</p>
+      </article>
+      <article class="category-card">
+        <div class="visual digest">DG</div>
+        <strong>Digestion</strong>
+        <p>Compare digestion, acidity, and stomach care options faster.</p>
+      </article>
+      <article class="category-card">
+        <div class="visual skin">SK</div>
+        <strong>Skin & Personal Care</strong>
+        <p>Browse skincare, creams, and everyday personal wellness products.</p>
+      </article>
+      <article class="category-card">
+        <div class="visual">WL</div>
+        <strong>Wellness</strong>
+        <p>Explore immunity, vitamins, daily wellness, and preventive care picks.</p>
+      </article>
+    </section>
+
+    <div class="section-head">
+      <h2>Popular products in store</h2>
+      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open storefront</button>
+    </div>
+    <section class="product-grid">
+      <article class="product-card">
+        <div class="visual relief">MD</div>
+        <h3>Daily Relief Tablets</h3>
+        <p>Trusted pain and fever relief for regular counter demand.</p>
+        <div class="price-line"><strong>Rs 126.00</strong><span>18% OFF</span></div>
+        <div class="tag-row"><span class="tag">Pain relief</span><span class="tag">In stock</span></div>
+      </article>
+      <article class="product-card">
+        <div class="visual digest">AC</div>
+        <h3>Digest Care Syrup</h3>
+        <p>Common digestion support with easy browse-and-bill access.</p>
+        <div class="price-line"><strong>Rs 189.00</strong><span>12% OFF</span></div>
+        <div class="tag-row"><span class="tag">Digestion</span><span class="tag">Counter ready</span></div>
+      </article>
+      <article class="product-card">
+        <div class="visual skin">CR</div>
+        <h3>Skin Care Cream</h3>
+        <p>Personal care discovery in a more appealing product-style layout.</p>
+        <div class="price-line"><strong>Rs 245.00</strong><span>15% OFF</span></div>
+        <div class="tag-row"><span class="tag">Skin care</span><span class="tag">Popular</span></div>
+      </article>
+      <article class="product-card">
+        <div class="visual">VT</div>
+        <h3>Wellness Vitamins</h3>
+        <p>Daily vitamins and wellness supplements shown like a real storefront.</p>
+        <div class="price-line"><strong>Rs 399.00</strong><span>20% OFF</span></div>
+        <div class="tag-row"><span class="tag">Wellness</span><span class="tag">Daily care</span></div>
+      </article>
+    </section>
+  </main>
 
   <script src="api-base.js"></script>
   <script>
-    window.addEventListener("load", () => {
-      setTimeout(() => document.getElementById("brandLoader")?.classList.add("hidden"), 260);
-    });
-
-    const URL = getApiBaseUrl();
     const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
     let isLoggingIn = false;
+
+    if (localStorage.getItem("token")) {
+      window.location.replace(`app.html?v=${Date.now()}`);
+    }
 
     function setLoginBusy(isBusy) {
       isLoggingIn = isBusy;
       const button = document.getElementById("loginBtn");
       if (!button) return;
       button.disabled = isBusy;
-      button.textContent = isBusy ? "Signing In..." : "Login To Dashboard";
+      button.textContent = isBusy ? "Signing in..." : "Login to dashboard";
     }
 
     async function login() {

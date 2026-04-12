@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const { hashPassword, verifyPassword, createToken, verifyToken } = require("../utils/auth");
 const { recordAudit } = require("../utils/audit");
 const { evaluateOfferRules } = require("../services/offersEngine");
+const { buildCustomerSnapshot } = require("../services/discountService");
 
 function run(name, fn) {
   try {
@@ -84,6 +85,23 @@ results.push(run("offers engine composes global and monday offers with a single 
   assert.equal(result.extraDiscountPercent, 25);
   assert.equal(result.finalDiscountPercent, 45);
   assert.equal(result.appliedOffers.length, 2);
+}));
+
+results.push(run("buildCustomerSnapshot preserves fallback membership data for new customers", () => {
+  const snapshot = buildCustomerSnapshot({}, {
+    phone: "9876543210",
+    name: "New Member",
+    isMember: true,
+    visit_count: 2,
+    last_purchase_date: "2026-04-10T00:00:00.000Z"
+  });
+
+  assert.equal(snapshot.phone, "9876543210");
+  assert.equal(snapshot.name, "New Member");
+  assert.equal(snapshot.membership, true);
+  assert.equal(snapshot.isMember, true);
+  assert.equal(snapshot.visit_count, 2);
+  assert.equal(snapshot.last_purchase_date, "2026-04-10T00:00:00.000Z");
 }));
 
 if (results.every(Boolean)) {

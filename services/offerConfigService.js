@@ -31,14 +31,13 @@ function normalizeConfig(config = {}) {
 }
 
 async function getOfferConfig() {
-  const existing = await OfferConfig.findOne({ key: "default" });
+  const existing = await OfferConfig.findOneAndUpdate(
+    { key: "default" },
+    { $setOnInsert: normalizeConfig() },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
 
-  if (existing) {
-    return normalizeConfig(existing.toObject());
-  }
-
-  const created = await OfferConfig.create(normalizeConfig());
-  return normalizeConfig(created.toObject());
+  return normalizeConfig(existing.toObject());
 }
 
 async function updateOfferConfig(input, actor = {}) {

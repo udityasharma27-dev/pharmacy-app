@@ -35,52 +35,85 @@ async function processEligibleReminder(customer) {
     return { status: "skipped", reason: "Customer does not have a valid reminder identity" };
   }
 
-  const existing = await ReminderLog.findOne({
-    phone,
-    reminderType: REMINDER_TYPE,
-    cycleKey
-  }).lean();
+  const claim = await ReminderLog.updateOne(
+    {
+      phone,
+      reminderType: REMINDER_TYPE,
+      cycleKey
+    },
+    {
+      $setOnInsert: {
+        phone,
+        customerName: String(customer.name || "").trim(),
+        reminderType: REMINDER_TYPE,
+        cycleKey,
+        lastPurchaseDate: customer.last_purchase_date,
+        message: REMINDER_MESSAGE,
+        delivery: {
+          provider: "",
+          status: "pending",
+          externalId: "",
+          response: null
+        },
+        sentAt: new Date()
+      }
+    },
+    {
+      upsert: true,
+      setDefaultsOnInsert: true
+    }
+  );
 
-  if (existing) {
+  const wasInserted = Boolean(claim?.upsertedId || claim?.upsertedCount);
+  const reminderLogId = claim?.upsertedId?._id || claim?.upsertedId;
+
+  if (!wasInserted || !reminderLogId) {
     return { status: "duplicate", reason: "Reminder already sent for this purchase cycle" };
   }
 
-  const delivery = await sendSms({
-    to: phone,
-    message: REMINDER_MESSAGE
-  });
+  try {
+    const delivery = await sendSms({
+      to: phone,
+      message: REMINDER_MESSAGE
+    });
 
-  if (delivery.status !== "sent") {
+    if (delivery.status !== "sent") {
+      await ReminderLog.deleteOne({ _id: reminderLogId });
+      return {
+        status: delivery.status,
+        skipped: Boolean(delivery.skipped),
+        reason: delivery.reason || "",
+        phone
+      };
+    }
+
+    await ReminderLog.updateOne(
+      { _id: reminderLogId },
+      {
+        $set: {
+          customerName: String(customer.name || "").trim(),
+          lastPurchaseDate: customer.last_purchase_date,
+          sentAt: new Date(),
+          delivery: {
+            provider: String(delivery.provider || ""),
+            status: "sent",
+            externalId: String(delivery.externalId || ""),
+            response: delivery.response || null
+          }
+        }
+      }
+    );
+
     return {
       status: delivery.status,
       skipped: Boolean(delivery.skipped),
       reason: delivery.reason || "",
       phone
     };
+  } catch (error) {
+    await ReminderLog.deleteOne({ _id: reminderLogId });
+    throw error;
   }
-
-  await ReminderLog.create({
-    phone,
-    customerName: String(customer.name || "").trim(),
-    reminderType: REMINDER_TYPE,
-    cycleKey,
-    lastPurchaseDate: customer.last_purchase_date,
-    message: REMINDER_MESSAGE,
-    delivery: {
-      provider: String(delivery.provider || ""),
-      status: "sent",
-      externalId: String(delivery.externalId || ""),
-      response: delivery.response || null
-    },
-    sentAt: new Date()
-  });
-
-  return {
-    status: delivery.status,
-    skipped: Boolean(delivery.skipped),
-    reason: delivery.reason || "",
-    phone
-  };
 }
 
 async function runDailyReminderCycle(now = new Date()) {

@@ -1562,10 +1562,28 @@ async function deleteMedicine(medicineId, medicineName) {
 }
 
 function printInvoice(billId) {
-  const bill = bills.find(item => item._id === billId);
-  if (!bill) return setMessage("Bill not found.", "error");
+  const localBill = bills.find(item => item._id === billId) || allBills.find(item => item._id === billId);
+  if (localBill) {
+    openInvoiceWindow(localBill);
+    return;
+  }
 
+  fetchJson(`/bills/${billId}`)
+    .then(data => {
+      if (!data.bill) throw new Error("Bill not found.");
+      openInvoiceWindow(data.bill);
+    })
+    .catch(error => {
+      setMessage(error.message || "Bill not found.", "error");
+    });
+}
+
+function openInvoiceWindow(bill) {
   const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) {
+    setMessage("Popup blocked. Please allow popups to print the invoice.", "error");
+    return;
+  }
   win.document.write(`
     <html>
       <head>

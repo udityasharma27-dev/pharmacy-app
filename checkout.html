@@ -148,6 +148,12 @@
     let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
     let pollTimer=null;
     let isFinalizingPayment=false;
+    let checkoutSummary={
+      subtotalAmount:0,
+      discountAmount:0,
+      totalAmount:0,
+      customer:customer
+    };
     if(!localStorage.getItem("token"))window.location.replace(`index.html?t=${Date.now()}`);
 
     function getToken(){return localStorage.getItem("token")||""}
@@ -172,7 +178,7 @@
           return;
         }
       let totalValue=0,units=0;
-      const discountPercent=Number(customer?.membershipDiscountPercent||0);
+      const activeCustomer=checkoutSummary.customer||customer;
       items.innerHTML=cart.map(item=>{
         const lineTotal=Number(item.price)*Number(item.quantity);
         totalValue+=lineTotal;units+=Number(item.quantity);
@@ -182,13 +188,15 @@
       unitCount.textContent=String(units);
       topItemCount.textContent=String(cart.length);
       topUnitCount.textContent=String(units);
-      customerSummary.textContent=customer?.phone ? `${customer.name || "Customer"} (${customer.phone})` : "Walk-in";
-      memberSummary.textContent=customer?.isMember ? `Yes (${discountPercent}%)` : "No";
-      subtotal.textContent=formatAmount(totalValue);
-      discount.textContent=formatAmount(totalValue*(discountPercent/100));
-      const payable=formatAmount(Math.max(0,totalValue-(totalValue*(discountPercent/100))));
-      total.textContent=payable;
-      topTotal.textContent=payable;
+      customerSummary.textContent=activeCustomer?.phone ? `${activeCustomer.name || "Customer"} (${activeCustomer.phone})` : "Walk-in";
+      memberSummary.textContent=activeCustomer?.isMember || activeCustomer?.membership ? "Yes" : "No";
+      const subtotalValue=Number(checkoutSummary.subtotalAmount||totalValue);
+      const discountValue=Number(checkoutSummary.discountAmount||0);
+      const totalValueFromServer=Number(checkoutSummary.totalAmount||Math.max(0,subtotalValue-discountValue));
+      subtotal.textContent=formatAmount(subtotalValue);
+      discount.textContent=formatAmount(discountValue);
+      total.textContent=formatAmount(totalValueFromServer);
+      topTotal.textContent=formatAmount(totalValueFromServer);
     }
 
     function updateStatusBox(status,reference=""){
@@ -234,8 +242,15 @@
       });
       paymentSessionId=data.sessionId;
       localStorage.setItem("paymentSessionId",paymentSessionId);
+      checkoutSummary={
+        subtotalAmount:Number(data.subtotalAmount||0),
+        discountAmount:Number(data.discountAmount||0),
+        totalAmount:Number(data.totalAmount||0),
+        customer:data.customer||customer
+      };
       sessionBox.textContent=`Reference: ${paymentSessionId}`;
       updateStatusBox(data.status);
+      renderOrder();
     }
 
     async function generateBill(){

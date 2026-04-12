@@ -53,8 +53,9 @@ function getDiscountPercent({ membership = false, visitCount = 0, category, bran
 }
 
 function buildCustomerSnapshot(customer = {}, fallback = {}) {
-  const membership = Boolean(customer.membership ?? customer.isMember);
-  const visitCount = Math.max(0, Number(customer.visit_count || 0) || 0);
+  const membership = Boolean(customer.membership ?? customer.isMember ?? fallback.membership ?? fallback.isMember);
+  const visitSource = customer.visit_count ?? fallback.visit_count ?? 0;
+  const visitCount = Math.max(0, Number(visitSource) || 0);
   const phone = String(customer.phone || fallback.phone || "").replace(/\D/g, "").trim();
   const name = String(customer.name || fallback.name || "").trim();
 
@@ -64,7 +65,7 @@ function buildCustomerSnapshot(customer = {}, fallback = {}) {
     membership,
     isMember: membership,
     visit_count: visitCount,
-    last_purchase_date: customer.last_purchase_date || null,
+    last_purchase_date: customer.last_purchase_date || fallback.last_purchase_date || null,
     hasTrackedCustomer: isValidPhone(phone)
   };
 }

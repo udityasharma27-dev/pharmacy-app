@@ -39,5 +39,6 @@ for (const file of files) {
 }
 
 copyDirectory(path.join(root, "assets"), path.join(output, "assets"));
+copyDirectory(path.join(root, "share"), path.join(output, "share"));
 
 console.log(`Static site prepared in ${output}`);

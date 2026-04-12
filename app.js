@@ -34,7 +34,7 @@ let isRefreshingData = false;
 let refreshTimer = null;
 let isSubmittingTransfer = false;
 let hasCompletedInitialRender = false;
-let appExperienceMode = localStorage.getItem("appExperienceMode") || "customer";
+let appExperienceMode = "staff";
 let customerScannerStream = null;
 let customerScannerFrame = null;
 let customerScannerActive = false;
@@ -201,12 +201,11 @@ function applyFormMemoryIfEmpty() {
 }
 
 function applyExperienceMode() {
-  if (isCustomerUser()) {
-    appExperienceMode = "customer";
-  }
+  appExperienceMode = "staff";
+  stopCustomerBarcodeScanner();
 
-  document.body.classList.toggle("customer-mode", isCustomerMode());
-  document.body.classList.toggle("staff-mode", !isCustomerMode());
+  document.body.classList.remove("customer-mode");
+  document.body.classList.add("staff-mode");
   localStorage.setItem("appExperienceMode", appExperienceMode);
 
   const heroEyebrow = document.getElementById("heroEyebrow");
@@ -219,34 +218,19 @@ function applyExperienceMode() {
   const customerBtn = document.getElementById("customerModeBtn");
   const roleLabel = document.getElementById("roleLabel");
 
-  if (heroEyebrow) heroEyebrow.textContent = isCustomerMode() ? "Customer Storefront" : "Counter Workspace";
+  if (heroEyebrow) heroEyebrow.textContent = "Counter Workspace";
   if (heroTitle) heroTitle.textContent = heroTitle.textContent || "Lumiere de Vie Pharma";
-  if (heroDescription) {
-    heroDescription.textContent = isCustomerMode()
-      ? "Turn the counter into a welcoming in-store experience with guided discovery, membership savings, and a fast checkout flow."
-      : "Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.";
-  }
-  if (billingTitle) billingTitle.textContent = isCustomerMode() ? "Customer Checkout Desk" : "Billing Desk";
-  if (billingSubtitle) {
-    billingSubtitle.textContent = isCustomerMode()
-      ? "Search medicines, confirm customer details, and build a polished cart while the shopper is standing at the counter."
-      : "Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.";
-  }
-  if (loaderText) {
-    loaderText.textContent = isCustomerMode()
-      ? "Preparing product discovery, membership savings, and live checkout."
-      : "Loading inventory, team insights, and live store controls.";
-  }
-  if (staffBtn) staffBtn.classList.toggle("active", !isCustomerMode());
-  if (customerBtn) customerBtn.classList.toggle("active", isCustomerMode());
-  if (staffBtn) staffBtn.hidden = isCustomerUser();
-  if (customerBtn) customerBtn.textContent = isCustomerUser() ? "Customer Storefront" : "Customer View";
-  if (roleLabel && isCustomerUser()) roleLabel.textContent = "customer";
+  if (heroDescription) heroDescription.textContent = "Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.";
+  if (billingTitle) billingTitle.textContent = "Billing Desk";
+  if (billingSubtitle) billingSubtitle.textContent = "Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.";
+  if (loaderText) loaderText.textContent = "Loading inventory, team insights, and live store controls.";
+  if (staffBtn) staffBtn.classList.add("active");
+  if (customerBtn) customerBtn.hidden = true;
+  if (roleLabel && currentUser) roleLabel.textContent = currentUser.role;
 }
 
 function toggleExperienceMode(mode) {
-  appExperienceMode = mode === "staff" ? "staff" : "customer";
-  if (!isCustomerMode()) stopCustomerBarcodeScanner();
+  appExperienceMode = "staff";
   applyExperienceMode();
   renderAll();
 }
@@ -279,17 +263,7 @@ async function loadCurrentUser() {
     localStorage.setItem("activeStoreId", activeStoreId);
   }
   localStorage.setItem("role", currentUser.role);
-  if (isCustomerUser()) {
-    appExperienceMode = "customer";
-    localStorage.setItem("appExperienceMode", appExperienceMode);
-    selectedCustomer = {
-      phone: String(currentUser.phone || "").replace(/\D/g, ""),
-      name: currentUser.fullName || "",
-      isMember: false,
-      membershipDiscountPercent: Number(currentUser.membershipDiscountPercent || 0) || 0
-    };
-    saveCustomer();
-  }
+  localStorage.setItem("appExperienceMode", "staff");
   document.getElementById("roleLabel").textContent = currentUser.role;
   document.getElementById("activeStoreLabel").textContent = currentUser.storeName || "All Stores";
   document.getElementById("ownerPanel").hidden = !isOwner();
@@ -1830,21 +1804,18 @@ function goToCheckout() {
   if (!cart.length) return setMessage("Cart is empty.", "error");
   const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
   const checkoutCustomer = selectedCustomer || {
-    phone: String(document.getElementById("customerPhone")?.value || currentUser?.phone || "").replace(/\D/g, ""),
-    name: document.getElementById("customerName")?.value?.trim() || currentUser?.fullName || "",
-    isMember: Boolean(isCustomerUser()),
+    phone: String(document.getElementById("customerPhone")?.value || "").replace(/\D/g, ""),
+    name: document.getElementById("customerName")?.value?.trim() || "",
+    isMember: false,
     membershipDiscountPercent: Number(document.getElementById("memberDiscount")?.value || 0) || 0
   };
   localStorage.removeItem("paymentSessionId");
   localStorage.removeItem("paymentMethod");
-  localStorage.setItem("pendingOrderSource", isCustomerUser() ? "online" : "in_store");
-  localStorage.setItem("pendingCustomerContext", isCustomerUser() ? "self_service" : "staff_controlled");
+  localStorage.setItem("pendingOrderSource", "in_store");
+  localStorage.setItem("pendingCustomerContext", "staff_controlled");
   localStorage.setItem("pendingCheckoutCart", JSON.stringify(cart));
   localStorage.setItem("pendingCustomer", JSON.stringify(checkoutCustomer));
-  localStorage.setItem("pendingStore", JSON.stringify({
-    storeId: activeStore?._id || activeStoreId || currentUser?.storeId || "",
-    storeName: activeStore?.name || currentUser?.storeName || document.getElementById("activeStoreLabel")?.textContent || ""
-  }));
+  localStorage.removeItem("pendingStore");
   window.location.href = "checkout.html";
 }
 
@@ -2257,19 +2228,11 @@ function focusBillingSearch() {
 }
 
 function focusCustomerSearch() {
-  if (!isCustomerMode()) {
-    appExperienceMode = "customer";
-    applyExperienceMode();
-  }
   document.getElementById("billingSearch").scrollIntoView({ behavior: "smooth", block: "center" });
   document.getElementById("billingSearch").focus();
 }
 
 function focusCustomerMembership() {
-  if (!isCustomerMode()) {
-    appExperienceMode = "customer";
-    applyExperienceMode();
-  }
   document.getElementById("customerPhone").scrollIntoView({ behavior: "smooth", block: "center" });
   document.getElementById("customerPhone").focus();
 }
@@ -2284,15 +2247,6 @@ function focusCategorySearch(category) {
 }
 
 function focusBarcodeSearch() {
-  if (isCustomerMode()) {
-    document.getElementById("customerBarcodePanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    const customerInput = getCustomerBarcodeInput();
-    if (customerInput) {
-      customerInput.focus();
-      customerInput.select();
-      return;
-    }
-  }
   const billingInput = getBarcodeSearchInput();
   if (billingInput) {
     billingInput.focus();

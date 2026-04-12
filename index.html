@@ -424,8 +424,7 @@
         <input placeholder="Search medicines, wellness, personal care and daily essentials">
       </label>
       <div class="header-actions">
-        <button class="header-btn" type="button" onclick="window.location.href='app.html'">Browse store</button>
-        <button class="header-btn" type="button" onclick="showAuthPanel('customer')">Customer sign up</button>
+        <button class="header-btn" type="button" onclick="window.location.href='app.html'">Open dashboard</button>
       </div>
     </div>
     <div class="nav">
@@ -446,49 +445,19 @@
       <div class="hero-banner">
         <div class="eyebrow">Summer Wellness Savings</div>
         <h1>Shop smarter for everyday care and pharmacy essentials.</h1>
-        <p>Make the store feel more like a modern health marketplace. Customers can browse by concern, compare products quickly, and move to checkout with guided staff support.</p>
+        <p>Run the pharmacy with faster billing, cleaner stock control, low-stock alerts, and a calmer day-to-day counter workflow.</p>
         <div class="hero-actions">
-          <button class="cta cta-primary" type="button" onclick="window.location.href='app.html'">Open customer storefront</button>
-          <button class="cta cta-secondary" type="button" onclick="showAuthPanel('customer')">Customer account</button>
+          <button class="cta cta-primary" type="button" onclick="window.location.href='app.html'">Open pharmacy app</button>
+          <button class="cta cta-secondary" type="button" onclick="showAuthPanel('staff')">Staff login</button>
         </div>
       </div>
 
       <aside class="login-card">
         <div class="eyebrow">Account Access</div>
-        <h2>Customer sign up or staff sign in</h2>
-        <p>Customers can create an account with their phone number. Staff can still sign in to manage the counter and store operations.</p>
+        <h2>Staff sign in</h2>
+        <p>Use the staff account to manage billing, inventory, store alerts, and daily pharmacy operations.</p>
 
-        <div class="auth-tabs" role="tablist" aria-label="Sign in mode">
-          <button id="customerAuthTab" class="auth-tab active" type="button" onclick="showAuthPanel('customer')">Customer</button>
-          <button id="staffAuthTab" class="auth-tab" type="button" onclick="showAuthPanel('staff')">Staff</button>
-        </div>
-
-        <div id="customerAuthPanel" class="auth-panel active">
-          <div class="helper-note">
-            <strong>Customer login rule</strong>
-            Username is the phone number. Password can be full name plus birth date in `YYYYMMDD`, or birth date plus full name.
-          </div>
-
-          <div class="field">
-            <label for="customerPhone">Phone Number</label>
-            <input id="customerPhone" placeholder="Enter phone number">
-          </div>
-
-          <div class="field">
-            <label for="customerName">Full Name</label>
-            <input id="customerName" placeholder="Enter full name">
-          </div>
-
-          <div class="field">
-            <label for="customerBirthDate">Birth Date</label>
-            <input id="customerBirthDate" type="date">
-          </div>
-
-          <button id="customerSignupBtn" class="login-btn" type="button" onclick="signupCustomer()">Create customer account</button>
-          <a class="guest-link" href="#" onclick="loginCustomer(event)">Login with these details</a>
-        </div>
-
-        <div id="staffAuthPanel" class="auth-panel">
+        <div id="staffAuthPanel" class="auth-panel active">
           <div class="field">
             <label for="user">Username</label>
             <input id="user" placeholder="Enter username">
@@ -502,85 +471,85 @@
           <button id="loginBtn" class="login-btn" onclick="login()">Login to dashboard</button>
         </div>
 
-        <a class="guest-link" href="app.html">Continue to storefront</a>
+        <a class="guest-link" href="app.html">Continue to pharmacy app</a>
         <p id="message" class="message"></p>
       </aside>
     </section>
 
     <section class="service-grid">
       <article class="service-card">
-        <h3>Order using prescription</h3>
-        <p>Bring the prescription to the counter and let staff quickly find and bill the right medicines.</p>
+        <h3>Counter billing</h3>
+        <p>Bill prescription and OTC medicines quickly with barcode search, quantity shortcuts, and batch-aware stock.</p>
       </article>
       <article class="service-card">
-        <h3>No prescription?</h3>
-        <p>Browse by concern and compare wellness or OTC products with pharmacist guidance.</p>
+        <h3>Inventory control</h3>
+        <p>Track supplier stock, expiry dates, and branch-ready medicine data from one workspace.</p>
       </article>
       <article class="service-card">
-        <h3>Membership and repeat orders</h3>
-        <p>Use phone-based lookup for faster repeat purchases, savings, and smoother checkout.</p>
+        <h3>Team operations</h3>
+        <p>Keep billing, alerts, attendance, and daily performance in one pharmacy system.</p>
       </article>
     </section>
 
     <div class="section-head">
-      <h2>Shop by health concern</h2>
-      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">View all</button>
+      <h2>Daily pharmacy workflow</h2>
+      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open app</button>
     </div>
     <section class="category-grid">
       <article class="category-card">
         <div class="visual relief">PF</div>
-        <strong>Pain Relief</strong>
-        <p>Quick access to fever, body pain, and daily relief essentials.</p>
+        <strong>Fast billing</strong>
+        <p>Quickly search medicine, select brand, and move straight to checkout.</p>
       </article>
       <article class="category-card">
         <div class="visual digest">DG</div>
-        <strong>Digestion</strong>
-        <p>Compare digestion, acidity, and stomach care options faster.</p>
+        <strong>Branch stock</strong>
+        <p>Keep better visibility on stock levels and transfer needs across stores.</p>
       </article>
       <article class="category-card">
         <div class="visual skin">SK</div>
-        <strong>Skin & Personal Care</strong>
-        <p>Browse skincare, creams, and everyday personal wellness products.</p>
+        <strong>Expiry checks</strong>
+        <p>Catch expiring batches and low-stock items before they slow the counter down.</p>
       </article>
       <article class="category-card">
         <div class="visual">WL</div>
-        <strong>Wellness</strong>
-        <p>Explore immunity, vitamins, daily wellness, and preventive care picks.</p>
+        <strong>Team dashboard</strong>
+        <p>Track daily billing, revenue, and staff activity in one place.</p>
       </article>
     </section>
 
     <div class="section-head">
-      <h2>Popular products in store</h2>
-      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open storefront</button>
+      <h2>Counter-ready features</h2>
+      <button class="mini-btn" type="button" onclick="window.location.href='app.html'">Open dashboard</button>
     </div>
     <section class="product-grid">
       <article class="product-card">
         <div class="visual relief">MD</div>
-        <h3>Daily Relief Tablets</h3>
-        <p>Trusted pain and fever relief for regular counter demand.</p>
-        <div class="price-line"><strong>Rs 126.00</strong><span>18% OFF</span></div>
-        <div class="tag-row"><span class="tag">Pain relief</span><span class="tag">In stock</span></div>
+        <h3>Barcode billing</h3>
+        <p>Scan or type medicine barcode and select stock faster during billing.</p>
+        <div class="price-line"><strong>Fast</strong><span>Counter ready</span></div>
+        <div class="tag-row"><span class="tag">Billing</span><span class="tag">Barcode</span></div>
       </article>
       <article class="product-card">
         <div class="visual digest">AC</div>
-        <h3>Digest Care Syrup</h3>
-        <p>Common digestion support with easy browse-and-bill access.</p>
-        <div class="price-line"><strong>Rs 189.00</strong><span>12% OFF</span></div>
-        <div class="tag-row"><span class="tag">Digestion</span><span class="tag">Counter ready</span></div>
+        <h3>Inventory search</h3>
+        <p>Find medicine by salt, supplier, batch, or brand without leaving the main desk.</p>
+        <div class="price-line"><strong>Smart</strong><span>Search</span></div>
+        <div class="tag-row"><span class="tag">Inventory</span><span class="tag">Search</span></div>
       </article>
       <article class="product-card">
         <div class="visual skin">CR</div>
-        <h3>Skin Care Cream</h3>
-        <p>Personal care discovery in a more appealing product-style layout.</p>
-        <div class="price-line"><strong>Rs 245.00</strong><span>15% OFF</span></div>
-        <div class="tag-row"><span class="tag">Skin care</span><span class="tag">Popular</span></div>
+        <h3>Low-stock alerts</h3>
+        <p>Review the brands that need restocking before they affect patient service.</p>
+        <div class="price-line"><strong>Live</strong><span>Alerts</span></div>
+        <div class="tag-row"><span class="tag">Alerts</span><span class="tag">Restock</span></div>
       </article>
       <article class="product-card">
         <div class="visual">VT</div>
-        <h3>Wellness Vitamins</h3>
-        <p>Daily vitamins and wellness supplements shown like a real storefront.</p>
-        <div class="price-line"><strong>Rs 399.00</strong><span>20% OFF</span></div>
-        <div class="tag-row"><span class="tag">Wellness</span><span class="tag">Daily care</span></div>
+        <h3>Bill history</h3>
+        <p>Check completed invoices, revenue, profit, and print copies when needed.</p>
+        <div class="price-line"><strong>Clear</strong><span>History</span></div>
+        <div class="tag-row"><span class="tag">Bills</span><span class="tag">Reports</span></div>
       </article>
     </section>
   </main>
@@ -589,7 +558,7 @@
   <script>
     const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
     let isLoggingIn = false;
-    let activeAuthMode = "customer";
+    let activeAuthMode = "staff";
 
     if (localStorage.getItem("token")) {
       window.location.replace(`app.html?v=${Date.now()}`);
@@ -610,23 +579,9 @@
       return cleanName && cleanBirthDate ? `${cleanName}${cleanBirthDate}` : "";
     }
 
-    function showAuthPanel(mode) {
-      activeAuthMode = mode === "staff" ? "staff" : "customer";
-      const customerPanel = document.getElementById("customerAuthPanel");
-      const staffPanel = document.getElementById("staffAuthPanel");
-      const customerTab = document.getElementById("customerAuthTab");
-      const staffTab = document.getElementById("staffAuthTab");
-
-      customerPanel.classList.toggle("active", activeAuthMode === "customer");
-      staffPanel.classList.toggle("active", activeAuthMode === "staff");
-      customerTab.classList.toggle("active", activeAuthMode === "customer");
-      staffTab.classList.toggle("active", activeAuthMode === "staff");
-
-      if (activeAuthMode === "customer") {
-        document.getElementById("customerPhone").focus();
-      } else {
-        document.getElementById("user").focus();
-      }
+    function showAuthPanel() {
+      activeAuthMode = "staff";
+      document.getElementById("user").focus();
     }
 
     function setLoginBusy(isBusy) {
@@ -637,18 +592,11 @@
       button.textContent = isBusy ? "Signing in..." : "Login to dashboard";
     }
 
-    function setCustomerBusy(isBusy, text = "Create customer account") {
-      const button = document.getElementById("customerSignupBtn");
-      if (!button) return;
-      button.disabled = isBusy;
-      button.textContent = isBusy ? text : "Create customer account";
-    }
-
     function completeAuth(data) {
       localStorage.clear();
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
-      localStorage.setItem("appExperienceMode", "customer");
+      localStorage.setItem("appExperienceMode", "staff");
       window.location.replace(`app.html?v=${Date.now()}`);
     }
 
@@ -697,105 +645,7 @@
       }
     }
 
-    async function loginCustomer(event) {
-      if (event) event.preventDefault();
-      if (isLoggingIn) return;
-
-      const phone = normalizePhone(document.getElementById("customerPhone").value);
-      const fullName = document.getElementById("customerName").value.trim();
-      const birthDate = document.getElementById("customerBirthDate").value;
-      const password = buildCustomerPassword(fullName, birthDate);
-      const apiBase = getApiBaseUrl();
-      const message = document.getElementById("message");
-
-      message.innerText = "";
-
-      if (!apiBase) {
-        message.innerText = "Server configuration is missing.";
-        return;
-      }
-
-      if (!phone || !fullName || !birthDate) {
-        message.innerText = "Enter phone number, full name, and birth date to login.";
-        return;
-      }
-
-      try {
-        setCustomerBusy(true, "Signing in...");
-        isLoggingIn = true;
-        const res = await fetch(apiBase + "/users/login", {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: phone, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          message.innerText = data.message || "Customer login failed.";
-          return;
-        }
-
-        completeAuth(data);
-      } catch (error) {
-        message.innerText = isWebOrigin
-          ? "Server is not reachable. Start the backend and open the app from that same server address."
-          : "Server is not reachable. Check that the live backend is running.";
-      } finally {
-        isLoggingIn = false;
-        setCustomerBusy(false);
-      }
-    }
-
-    async function signupCustomer() {
-      if (isLoggingIn) return;
-
-      const phone = normalizePhone(document.getElementById("customerPhone").value);
-      const fullName = document.getElementById("customerName").value.trim();
-      const birthDate = document.getElementById("customerBirthDate").value;
-      const apiBase = getApiBaseUrl();
-      const message = document.getElementById("message");
-
-      message.innerText = "";
-
-      if (!apiBase) {
-        message.innerText = "Server configuration is missing.";
-        return;
-      }
-
-      if (!phone || !fullName || !birthDate) {
-        message.innerText = "Enter phone number, full name, and birth date to create an account.";
-        return;
-      }
-
-      try {
-        setCustomerBusy(true, "Creating account...");
-        isLoggingIn = true;
-        const res = await fetch(apiBase + "/users/customer-signup", {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, fullName, birthDate })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          message.innerText = data.message || "Customer signup failed.";
-          return;
-        }
-
-        completeAuth(data);
-      } catch (error) {
-        message.innerText = isWebOrigin
-          ? "Server is not reachable. Start the backend and open the app from that same server address."
-          : "Server is not reachable. Check that the live backend is running.";
-      } finally {
-        isLoggingIn = false;
-        setCustomerBusy(false);
-      }
-    }
+    showAuthPanel();
   </script>
   <script src="pwa.js"></script>
 </body>

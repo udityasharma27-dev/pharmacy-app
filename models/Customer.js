@@ -10,6 +10,10 @@ const customerSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  birthDate: {
+    type: String,
+    default: ""
+  },
   isMember: {
     type: Boolean,
     default: false
@@ -29,6 +33,25 @@ const customerSchema = new mongoose.Schema({
   membershipDiscountPercent: {
     type: Number,
     default: 0
+  },
+  linkedUserId: {
+    type: String,
+    default: ""
+  },
+  appStatus: {
+    type: String,
+    enum: ["store_only", "invited", "active"],
+    default: "store_only"
+  },
+  acquisitionSource: {
+    type: String,
+    enum: ["in_store", "online"],
+    default: "in_store"
+  },
+  lastOrderSource: {
+    type: String,
+    enum: ["", "in_store", "online"],
+    default: ""
   },
   notes: {
     type: String,

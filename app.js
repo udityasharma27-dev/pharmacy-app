@@ -35,6 +35,11 @@ let refreshTimer = null;
 let isSubmittingTransfer = false;
 let hasCompletedInitialRender = false;
 let appExperienceMode = localStorage.getItem("appExperienceMode") || "customer";
+let customerScannerStream = null;
+let customerScannerFrame = null;
+let customerScannerActive = false;
+let customerScannerStatus = "Use camera scan or enter a barcode to find a product instantly.";
+let barcodeDetectorPromise = null;
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -83,6 +88,7 @@ const formatInvoiceNumber = bill => bill?.invoiceNumber || `INV-${String(bill?._
 const saveCart = () => localStorage.setItem("pharmacyCart", JSON.stringify(cart));
 const saveCustomer = () => localStorage.setItem("selectedCustomer", JSON.stringify(selectedCustomer));
 const isOwner = () => currentUser?.role === "owner";
+const isCustomerUser = () => currentUser?.role === "customer";
 const isCustomerMode = () => appExperienceMode === "customer";
 
 function normalize(value) {
@@ -155,6 +161,22 @@ function getAllAvailableChoices() {
   return list;
 }
 
+function getBarcodeSearchInput() {
+  return document.getElementById("barcodeSearch");
+}
+
+function getCustomerBarcodeInput() {
+  return document.getElementById("customerBarcodeSearch");
+}
+
+function setBarcodeSearchValue(value) {
+  const nextValue = String(value || "");
+  const billingInput = getBarcodeSearchInput();
+  const customerInput = getCustomerBarcodeInput();
+  if (billingInput) billingInput.value = nextValue;
+  if (customerInput) customerInput.value = nextValue;
+}
+
 function storeFormMemory(payload) {
   formMemory = {
     supplier: payload.supplier || formMemory.supplier || "",
@@ -179,6 +201,10 @@ function applyFormMemoryIfEmpty() {
 }
 
 function applyExperienceMode() {
+  if (isCustomerUser()) {
+    appExperienceMode = "customer";
+  }
+
   document.body.classList.toggle("customer-mode", isCustomerMode());
   document.body.classList.toggle("staff-mode", !isCustomerMode());
   localStorage.setItem("appExperienceMode", appExperienceMode);
@@ -191,6 +217,7 @@ function applyExperienceMode() {
   const loaderText = document.getElementById("brandLoaderText");
   const staffBtn = document.getElementById("staffModeBtn");
   const customerBtn = document.getElementById("customerModeBtn");
+  const roleLabel = document.getElementById("roleLabel");
 
   if (heroEyebrow) heroEyebrow.textContent = isCustomerMode() ? "Customer Storefront" : "Counter Workspace";
   if (heroTitle) heroTitle.textContent = heroTitle.textContent || "Lumiere de Vie Pharma";
@@ -212,10 +239,14 @@ function applyExperienceMode() {
   }
   if (staffBtn) staffBtn.classList.toggle("active", !isCustomerMode());
   if (customerBtn) customerBtn.classList.toggle("active", isCustomerMode());
+  if (staffBtn) staffBtn.hidden = isCustomerUser();
+  if (customerBtn) customerBtn.textContent = isCustomerUser() ? "Customer Storefront" : "Customer View";
+  if (roleLabel && isCustomerUser()) roleLabel.textContent = "customer";
 }
 
 function toggleExperienceMode(mode) {
   appExperienceMode = mode === "staff" ? "staff" : "customer";
+  if (!isCustomerMode()) stopCustomerBarcodeScanner();
   applyExperienceMode();
   renderAll();
 }
@@ -248,6 +279,17 @@ async function loadCurrentUser() {
     localStorage.setItem("activeStoreId", activeStoreId);
   }
   localStorage.setItem("role", currentUser.role);
+  if (isCustomerUser()) {
+    appExperienceMode = "customer";
+    localStorage.setItem("appExperienceMode", appExperienceMode);
+    selectedCustomer = {
+      phone: String(currentUser.phone || "").replace(/\D/g, ""),
+      name: currentUser.fullName || "",
+      isMember: false,
+      membershipDiscountPercent: Number(currentUser.membershipDiscountPercent || 0) || 0
+    };
+    saveCustomer();
+  }
   document.getElementById("roleLabel").textContent = currentUser.role;
   document.getElementById("activeStoreLabel").textContent = currentUser.storeName || "All Stores";
   document.getElementById("ownerPanel").hidden = !isOwner();
@@ -729,6 +771,178 @@ function resetCustomerCatalog() {
   renderAll();
 }
 
+function renderCustomerBarcodePanel() {
+  const panel = document.getElementById("customerBarcodePanel");
+  if (!panel) return;
+
+  const barcodeValue = getBarcodeSearchInput()?.value || "";
+  const selectedLabel = selectedBillingChoice
+    ? `${selectedBillingChoice.salt} - ${selectedBillingChoice.brandName}`
+    : "No product selected yet";
+  const cameraReady = window.isSecureContext && !!navigator.mediaDevices?.getUserMedia && "BarcodeDetector" in window;
+
+  panel.innerHTML = `
+    <div class="customer-barcode-head">
+      <div>
+        <p class="customer-barcode-kicker">Barcode Help</p>
+        <h3>Scan at the customer side</h3>
+        <p>Use the camera on supported browsers or type the barcode manually if the scanner device sends keyboard input.</p>
+      </div>
+      <div class="product-pill-row">
+        <span class="product-pill">${cameraReady ? "Camera ready" : "Manual entry mode"}</span>
+        <span class="product-pill">${barcodeValue ? `Barcode ${escapeHtml(barcodeValue)}` : "Waiting for barcode"}</span>
+      </div>
+    </div>
+    <div class="customer-barcode-grid">
+      <div class="customer-barcode-card">
+        <label for="customerBarcodeSearch">Barcode</label>
+        <div class="customer-barcode-entry">
+          <input id="customerBarcodeSearch" placeholder="Scan or type barcode" value="${escapeHtml(barcodeValue)}" oninput="syncCustomerBarcode(this.value)" onkeydown="if(event.key==='Enter') handleBarcodeSearch(true)">
+          <button class="btn btn-primary" type="button" onclick="handleBarcodeSearch(true)">Find Product</button>
+        </div>
+        <div class="customer-barcode-actions">
+          <button class="btn btn-soft" type="button" onclick="focusBarcodeSearch()">Focus Barcode</button>
+          <button class="btn btn-soft" type="button" onclick="${customerScannerActive ? "stopCustomerBarcodeScanner('Camera scanner closed.')" : "startCustomerBarcodeScanner()"}">${customerScannerActive ? "Stop Camera" : "Open Camera Scanner"}</button>
+          <button class="btn btn-secondary" type="button" onclick="clearCustomerBarcodeSearch()">Clear</button>
+        </div>
+        <div class="customer-barcode-note">${cameraReady ? "Best on HTTPS or localhost with the rear camera." : "Camera scan needs a secure browser that supports BarcodeDetector. Manual barcode search still works."}</div>
+      </div>
+      <div class="customer-barcode-card">
+        <strong>Matched product</strong>
+        <div class="meta">${escapeHtml(selectedLabel)}</div>
+        <div class="customer-barcode-note">${escapeHtml(customerScannerStatus)}</div>
+        ${customerScannerActive ? `
+          <div class="customer-scanner-shell">
+            <video id="customerBarcodeVideo" autoplay muted playsinline></video>
+          </div>
+        ` : `
+          <div class="customer-scan-placeholder">
+            <strong>${cameraReady ? "Camera idle" : "Manual barcode search"}</strong>
+            <span>${cameraReady ? "Open the scanner and point it at the product barcode." : "Use a scanner gun or type the barcode here to select the medicine."}</span>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+
+  if (customerScannerActive) attachCustomerScannerVideo();
+}
+
+async function getBarcodeDetector() {
+  if (!("BarcodeDetector" in window)) return null;
+  if (!barcodeDetectorPromise) {
+    barcodeDetectorPromise = (async () => {
+      try {
+        const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+        const preferredFormats = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "codabar", "itf"];
+        const formats = preferredFormats.filter(format => supportedFormats.includes(format));
+        return new window.BarcodeDetector(formats.length ? { formats } : undefined);
+      } catch (error) {
+        return new window.BarcodeDetector();
+      }
+    })();
+  }
+  return barcodeDetectorPromise;
+}
+
+function attachCustomerScannerVideo() {
+  const video = document.getElementById("customerBarcodeVideo");
+  if (!video || !customerScannerStream) return;
+  if (video.srcObject !== customerScannerStream) video.srcObject = customerScannerStream;
+  const playPromise = video.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function syncCustomerBarcode(value) {
+  setBarcodeSearchValue(value);
+  renderCustomerBarcodePanel();
+}
+
+function clearCustomerBarcodeSearch() {
+  setBarcodeSearchValue("");
+  customerScannerStatus = "Barcode cleared. Scan again or type a new barcode.";
+  renderBillingFinder();
+  renderCustomerBarcodePanel();
+}
+
+function stopCustomerBarcodeScanner(statusText = "") {
+  customerScannerActive = false;
+  if (customerScannerFrame) {
+    window.cancelAnimationFrame(customerScannerFrame);
+    customerScannerFrame = null;
+  }
+  if (customerScannerStream) {
+    customerScannerStream.getTracks().forEach(track => track.stop());
+    customerScannerStream = null;
+  }
+  if (statusText) customerScannerStatus = statusText;
+  renderCustomerBarcodePanel();
+}
+
+async function scanCustomerBarcode(detector) {
+  if (!customerScannerActive) return;
+  const video = document.getElementById("customerBarcodeVideo");
+
+  if (video && video.readyState >= 2) {
+    try {
+      const results = await detector.detect(video);
+      const rawValue = results?.[0]?.rawValue ? String(results[0].rawValue).trim() : "";
+      if (rawValue) {
+        customerScannerStatus = `Scanned ${rawValue}. Looking up product now.`;
+        setBarcodeSearchValue(rawValue);
+        handleBarcodeSearch(true);
+        stopCustomerBarcodeScanner("Barcode scanned successfully.");
+        return;
+      }
+    } catch (error) {}
+  }
+
+  customerScannerFrame = window.requestAnimationFrame(() => scanCustomerBarcode(detector));
+}
+
+async function startCustomerBarcodeScanner() {
+  if (customerScannerActive) return;
+
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    customerScannerStatus = "Camera scan needs HTTPS or localhost access in a supported browser.";
+    renderCustomerBarcodePanel();
+    setMessage(customerScannerStatus, "error");
+    return;
+  }
+
+  const detector = await getBarcodeDetector();
+  if (!detector) {
+    customerScannerStatus = "This browser does not support built-in barcode detection yet.";
+    renderCustomerBarcodePanel();
+    setMessage(customerScannerStatus, "error");
+    return;
+  }
+
+  try {
+    customerScannerStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+    customerScannerActive = true;
+    customerScannerStatus = "Camera opened. Hold the barcode inside the frame.";
+    renderCustomerBarcodePanel();
+    attachCustomerScannerVideo();
+    scanCustomerBarcode(detector);
+  } catch (error) {
+    customerScannerStatus = error?.name === "NotAllowedError"
+      ? "Camera permission was denied. Allow access and try again."
+      : "Unable to open the camera scanner on this device.";
+    renderCustomerBarcodePanel();
+    setMessage(customerScannerStatus, "error");
+  }
+}
+
 function renderCustomerExperience() {
   const benefitsBox = document.getElementById("customerBenefits");
   const serviceBox = document.getElementById("customerServiceCards");
@@ -739,8 +953,10 @@ function renderCustomerExperience() {
   const faqBox = document.getElementById("customerFaq");
   const categoryFilter = document.getElementById("customerCategoryFilter");
   const filterTags = document.getElementById("customerFilterTags");
+  const assistedPanel = document.getElementById("assistedWorkspacePanel");
+  const barcodePanel = document.getElementById("customerBarcodePanel");
 
-  if (!benefitsBox || !serviceBox || !categoryBox || !shelfBox || !inventoryBox || !catalogHeader || !faqBox || !categoryFilter || !filterTags) return;
+  if (!benefitsBox || !serviceBox || !categoryBox || !shelfBox || !inventoryBox || !catalogHeader || !faqBox || !categoryFilter || !filterTags || !assistedPanel || !barcodePanel) return;
 
   const choices = getAllAvailableChoices();
   const categoryMap = medicines.reduce((acc, medicine) => {
@@ -798,6 +1014,35 @@ function renderCustomerExperience() {
     activeType !== "all" ? activeType : "All products",
     activeSort === "popular" ? "Popular first" : activeSort === "price-low" ? "Lowest price first" : activeSort === "price-high" ? "Highest price first" : "Highest stock first"
   ].map(tag => `<span class="customer-filter-tag">${escapeHtml(tag)}</span>`).join("");
+
+  assistedPanel.innerHTML = `
+    <div class="assisted-workspace-head">
+      <div>
+        <h3>Assisted Workspace</h3>
+        <p>Customer sees a clean storefront while the pharmacist still gets fast operational context for the same interaction.</p>
+      </div>
+      <div class="product-pill-row">
+        <span class="product-pill">Source: in-store</span>
+        <span class="product-pill">Context: staff controlled</span>
+      </div>
+    </div>
+    <div class="assisted-workspace-grid">
+      <div class="assisted-card">
+        <strong>Customer lookup</strong>
+        <div class="meta">${selectedCustomer?.phone ? `${escapeHtml(selectedCustomer.name || "Customer")} | ${escapeHtml(selectedCustomer.phone)}` : "No customer linked yet"}</div>
+      </div>
+      <div class="assisted-card">
+        <strong>Current cart</strong>
+        <div class="meta">${cart.length} items | ${cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} units</div>
+      </div>
+      <div class="assisted-card">
+        <strong>Store status</strong>
+        <div class="meta">${escapeHtml(activeStore?.name || currentUser?.storeName || "Main store")} | ${filteredChoices.length} matching products</div>
+      </div>
+    </div>
+  `;
+
+  renderCustomerBarcodePanel();
 
   benefitsBox.innerHTML = [
     {
@@ -1323,9 +1568,10 @@ function selectBillingMedicine(medicineId, brandId, focusQty = false) {
   document.getElementById("billSalt").value = medicineId;
   loadBillBrands(brandId);
   document.getElementById("billingSearch").value = `${selectedBillingChoice.salt} ${selectedBillingChoice.brandName}`;
-  document.getElementById("barcodeSearch").value = selectedBillingChoice.barcode || "";
+  setBarcodeSearchValue(selectedBillingChoice.barcode || "");
   if (!document.getElementById("billQty").value) document.getElementById("billQty").value = String(quickQuantityValue);
   renderBillingFinder();
+  renderCustomerBarcodePanel();
 
   if (focusQty) {
     document.getElementById("billQty").focus();
@@ -1334,7 +1580,8 @@ function selectBillingMedicine(medicineId, brandId, focusQty = false) {
 }
 
 function handleBarcodeSearch(strict = true) {
-  const value = normalize(document.getElementById("barcodeSearch").value);
+  const value = normalize(getBarcodeSearchInput()?.value);
+  renderCustomerBarcodePanel();
   if (!value) {
     renderBillingFinder();
     return;
@@ -1581,14 +1828,22 @@ async function saveMember() {
 
 function goToCheckout() {
   if (!cart.length) return setMessage("Cart is empty.", "error");
+  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
+  const checkoutCustomer = selectedCustomer || {
+    phone: String(document.getElementById("customerPhone")?.value || currentUser?.phone || "").replace(/\D/g, ""),
+    name: document.getElementById("customerName")?.value?.trim() || currentUser?.fullName || "",
+    isMember: Boolean(isCustomerUser()),
+    membershipDiscountPercent: Number(document.getElementById("memberDiscount")?.value || 0) || 0
+  };
   localStorage.removeItem("paymentSessionId");
   localStorage.removeItem("paymentMethod");
+  localStorage.setItem("pendingOrderSource", isCustomerUser() ? "online" : "in_store");
+  localStorage.setItem("pendingCustomerContext", isCustomerUser() ? "self_service" : "staff_controlled");
   localStorage.setItem("pendingCheckoutCart", JSON.stringify(cart));
-  localStorage.setItem("pendingCustomer", JSON.stringify(selectedCustomer || {
-    phone: String(document.getElementById("customerPhone")?.value || "").replace(/\D/g, ""),
-    name: document.getElementById("customerName")?.value?.trim() || "",
-    isMember: false,
-    membershipDiscountPercent: Number(document.getElementById("memberDiscount")?.value || 0) || 0
+  localStorage.setItem("pendingCustomer", JSON.stringify(checkoutCustomer));
+  localStorage.setItem("pendingStore", JSON.stringify({
+    storeId: activeStore?._id || activeStoreId || currentUser?.storeId || "",
+    storeName: activeStore?.name || currentUser?.storeName || document.getElementById("activeStoreLabel")?.textContent || ""
   }));
   window.location.href = "checkout.html";
 }
@@ -1961,6 +2216,7 @@ function openInvoiceWindow(bill) {
 }
 
 async function logout() {
+  stopCustomerBarcodeScanner();
   try {
     await fetchJson("/users/logout", { method: "POST" });
   } catch (error) {}
@@ -2028,7 +2284,20 @@ function focusCategorySearch(category) {
 }
 
 function focusBarcodeSearch() {
-  document.getElementById("barcodeSearch").focus();
+  if (isCustomerMode()) {
+    document.getElementById("customerBarcodePanel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const customerInput = getCustomerBarcodeInput();
+    if (customerInput) {
+      customerInput.focus();
+      customerInput.select();
+      return;
+    }
+  }
+  const billingInput = getBarcodeSearchInput();
+  if (billingInput) {
+    billingInput.focus();
+    billingInput.select();
+  }
 }
 
 function scrollToOwnerPanel() {

@@ -3,6 +3,17 @@ const { hashPassword, verifyPassword, createToken, verifyToken } = require("../u
 const { recordAudit } = require("../utils/audit");
 const { evaluateOfferRules } = require("../services/offersEngine");
 const { buildCustomerSnapshot } = require("../services/discountService");
+const {
+  normalizeOrderSource,
+  normalizeCustomerContext,
+  normalizeCustomerAppStatus
+} = require("../services/commerceMode");
+const {
+  buildCustomerUsername,
+  buildCustomerPassword,
+  buildCustomerPasswordVariants,
+  normalizeBirthDate
+} = require("../services/customerCredentials");
 
 function run(name, fn) {
   try {
@@ -102,6 +113,27 @@ results.push(run("buildCustomerSnapshot preserves fallback membership data for n
   assert.equal(snapshot.isMember, true);
   assert.equal(snapshot.visit_count, 2);
   assert.equal(snapshot.last_purchase_date, "2026-04-10T00:00:00.000Z");
+}));
+
+results.push(run("commerce mode normalizers keep assisted store flow safe by default", () => {
+  assert.equal(normalizeOrderSource(), "in_store");
+  assert.equal(normalizeOrderSource("online"), "online");
+  assert.equal(normalizeOrderSource("anything-else"), "in_store");
+  assert.equal(normalizeCustomerContext(), "staff_controlled");
+  assert.equal(normalizeCustomerContext("self_service"), "self_service");
+  assert.equal(normalizeCustomerAppStatus(), "store_only");
+  assert.equal(normalizeCustomerAppStatus("invited"), "invited");
+  assert.equal(normalizeCustomerAppStatus("active"), "active");
+}));
+
+results.push(run("customer credentials derive phone username and name-plus-birthdate password", () => {
+  assert.equal(buildCustomerUsername("+91 98765 43210"), "919876543210");
+  assert.equal(normalizeBirthDate("1998-04-23"), "19980423");
+  assert.equal(buildCustomerPassword("Riya Sharma", "1998-04-23"), "riyasharma19980423");
+  assert.deepEqual(
+    buildCustomerPasswordVariants("Riya Sharma", "1998-04-23"),
+    ["riyasharma19980423", "19980423riyasharma"]
+  );
 }));
 
 if (results.every(Boolean)) {

@@ -37,6 +37,7 @@
         <input id="customerSearchBar" placeholder="Search for medicines, wellness items, and daily essentials" oninput="syncCustomerSearch(this.value)">
       </label>
       <div class="customer-header-actions">
+        <button class="customer-header-btn" type="button" onclick="focusBarcodeSearch()">Scan Barcode</button>
         <button class="customer-header-btn" type="button" onclick="toggleCart()">Cart <strong id="customerCartCount">0</strong></button>
         <button class="customer-header-btn" type="button" onclick="focusCustomerMembership()">Membership</button>
       </div>
@@ -72,10 +73,25 @@
           <p id="customerPromoText">Search by symptom, category, or product type, help shoppers discover the right options faster, and keep the cart moving with a modern checkout flow.</p>
           <div class="customer-showcase-actions">
             <button class="btn btn-primary" type="button" onclick="focusCustomerSearch()">Start Shopping</button>
+            <button class="btn btn-soft" type="button" onclick="focusBarcodeSearch()">Scan Barcode</button>
             <button class="btn btn-soft" type="button" onclick="focusCustomerMembership()">Check Membership</button>
           </div>
         </div>
+        <div class="customer-promo-art">
+          <img src="assets/storefront-pill.svg" alt="Storefront medicine illustration">
+        </div>
         <div id="customerBenefits" class="customer-benefits"></div>
+      </div>
+      <div class="customer-assisted-strip">
+        <div class="customer-assisted-copy">
+          <strong>Assisted Store Mode</strong>
+          <span>The screen feels customer-friendly, while staff can still search faster, verify stock, and finish checkout from the same flow.</span>
+        </div>
+        <div class="customer-assisted-actions">
+          <button class="btn btn-soft" type="button" onclick="focusBillingSearch()">Quick Search</button>
+          <button class="btn btn-soft" type="button" onclick="focusBarcodeSearch()">Scan Barcode</button>
+          <button class="btn btn-primary" type="button" onclick="focusCustomerMembership()">Phone Lookup</button>
+        </div>
       </div>
       <div id="customerServiceCards" class="customer-service-cards"></div>
       <div class="customer-section-head">
@@ -236,6 +252,8 @@
               </div>
             </aside>
             <div class="customer-catalog-main">
+              <div id="customerBarcodePanel" class="customer-barcode-panel"></div>
+              <div id="assistedWorkspacePanel" class="assisted-workspace-panel"></div>
               <div id="customerInventoryList" class="customer-catalog-results"></div>
             </div>
           </div>

@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: String,
   role: {
     type: String,
-    enum: ["owner", "worker"],
+    enum: ["owner", "worker", "customer"],
     default: "worker"
   },
   fullName: {
@@ -63,6 +63,10 @@ const userSchema = new mongoose.Schema({
     default: ""
   },
   phone: {
+    type: String,
+    default: ""
+  },
+  birthDate: {
     type: String,
     default: ""
   },

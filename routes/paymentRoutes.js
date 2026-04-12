@@ -11,6 +11,7 @@ const {
 } = require("../services/discountService");
 const { getOfferConfig } = require("../services/offerConfigService");
 const { evaluateOfferRules } = require("../services/offersEngine");
+const { normalizeOrderSource, normalizeCustomerContext } = require("../services/commerceMode");
 
 function isManualUpiConfirmationAllowed() {
   return String(process.env.ALLOW_MANUAL_UPI_CONFIRM || "true").trim().toLowerCase() !== "false";
@@ -26,7 +27,15 @@ router.post("/session", async (req, res) => {
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     const provider = String(req.body.provider || "manual-upi").trim() || "manual-upi";
+    const source = normalizeOrderSource(req.body.source);
+    const customerContext = normalizeCustomerContext(req.body.customerContext);
     const requestedCustomer = req.body.customer || {};
+    const fallbackCustomer = req.user.role === "customer"
+      ? {
+        phone: req.user.phone || "",
+        name: req.user.fullName || ""
+      }
+      : {};
     const store = {
       storeId: String(req.body.store?.storeId || req.user.storeId || "").trim(),
       storeName: String(req.body.store?.storeName || req.user.storeName || "").trim()
@@ -36,11 +45,12 @@ router.post("/session", async (req, res) => {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
 
-    const normalizedPhone = normalizePhone(requestedCustomer.phone);
+    const effectiveCustomer = { ...fallbackCustomer, ...requestedCustomer };
+    const normalizedPhone = normalizePhone(effectiveCustomer.phone);
     const customerRecord = normalizedPhone
       ? await Customer.findOne({ phone: normalizedPhone }).lean()
       : null;
-    const customer = buildCustomerSnapshot(customerRecord, requestedCustomer);
+    const customer = buildCustomerSnapshot(customerRecord, effectiveCustomer);
     const offerConfig = await getOfferConfig();
     const mergedItems = new Map();
     const normalizedItems = [];
@@ -104,6 +114,8 @@ router.post("/session", async (req, res) => {
       userId: req.user.id,
       store,
       items: normalizedItems,
+      source,
+      customerContext,
       customer: {
         phone: customer.phone,
         name: customer.name,
@@ -149,6 +161,8 @@ router.get("/session/:id", async (req, res) => {
         subtotalAmount: session.subtotalAmount,
         discountAmount: session.discountAmount,
         totalAmount: session.totalAmount,
+        source: session.source,
+        customerContext: session.customerContext,
         provider: session.provider,
         customer: session.customer,
         paymentReference: session.paymentReference,

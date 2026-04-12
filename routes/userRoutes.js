@@ -2,10 +2,13 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const Bill = require("../models/Bill");
+const Customer = require("../models/Customer");
 const Store = require("../models/Store");
 const { createToken, hashPassword, verifyPassword, verifyToken } = require("../utils/auth");
 const { requireAuth, requireOwner } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
+const { normalizeCustomerAppStatus } = require("../services/commerceMode");
+const { buildCustomerPassword, buildCustomerPasswordVariants, buildCustomerUsername, normalizeBirthDate } = require("../services/customerCredentials");
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const loginAttempts = new Map();
@@ -16,6 +19,12 @@ function normalizeText(value) {
 
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").trim();
+}
+
+function normalizeUsernameInput(value) {
+  const text = normalizeText(value);
+  const phone = normalizePhone(text);
+  return phone.length >= 10 ? phone : text;
 }
 
 function parseMoney(value, fallback = 0) {
@@ -139,7 +148,7 @@ async function buildUserMetrics(user) {
 
 router.post("/login", async (req, res) => {
   try {
-    const username = normalizeText(req.body.username);
+    const username = normalizeUsernameInput(req.body.username);
     const password = String(req.body.password || "");
     const loginKey = getLoginKey(req, username);
     const attempts = getLoginAttemptState(loginKey);
@@ -160,6 +169,14 @@ router.post("/login", async (req, res) => {
     }
 
     let passwordMatches = verifyPassword(password, user.passwordHash);
+
+    if (!passwordMatches && user.role === "customer") {
+      passwordMatches = buildCustomerPasswordVariants(user.fullName, user.birthDate).includes(password);
+      if (passwordMatches && !user.passwordHash) {
+        user.passwordHash = hashPassword(password);
+        await user.save();
+      }
+    }
 
     if (!passwordMatches && user.password === password) {
       user.passwordHash = hashPassword(password);
@@ -184,6 +201,104 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: "Login failed" });
+  }
+});
+
+router.post("/customer-signup", async (req, res) => {
+  try {
+    const fullName = normalizeText(req.body.fullName);
+    const phone = normalizePhone(req.body.phone);
+    const birthDate = normalizeBirthDate(req.body.birthDate);
+    const username = buildCustomerUsername(phone);
+    const password = buildCustomerPassword(fullName, birthDate);
+
+    if (!fullName || !phone || !birthDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name, phone number, and birth date are required."
+      });
+    }
+
+    if (phone.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid phone number."
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to generate a password from the provided details."
+      });
+    }
+
+    const existing = await User.findOne({ username });
+
+    if (existing && existing.role !== "customer") {
+      return res.status(409).json({
+        success: false,
+        message: "That phone number is already in use by another account."
+      });
+    }
+
+    const user = existing && existing.role === "customer"
+      ? existing
+      : new User({
+        username,
+        role: "customer",
+        jobTitle: "Customer"
+      });
+
+    user.username = username;
+    user.passwordHash = hashPassword(password);
+    user.role = "customer";
+    user.fullName = fullName;
+    user.phone = phone;
+    user.birthDate = birthDate;
+    user.jobTitle = "Customer";
+    user.isActive = true;
+    await user.save();
+
+    const customer = await Customer.findOneAndUpdate(
+      { phone },
+      {
+        $set: {
+          name: fullName,
+          birthDate,
+          linkedUserId: String(user._id),
+          appStatus: normalizeCustomerAppStatus("active"),
+          acquisitionSource: "online"
+        }
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    await recordAudit(req, "user.customer-signup", "user", user._id, {
+      username: user.username,
+      phone: user.phone,
+      linkedCustomerId: customer ? String(customer._id) : "",
+      appStatus: customer?.appStatus || "active"
+    });
+
+    const token = createToken(user);
+
+    res.json({
+      success: true,
+      role: user.role,
+      token,
+      user: sanitizeUser(user),
+      credentials: {
+        username,
+        passwordRule: "Use your phone number as username. Password can be full name plus birth date in YYYYMMDD format, or birth date plus full name."
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Unable to create customer account" });
   }
 });
 

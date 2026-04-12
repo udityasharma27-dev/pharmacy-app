@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,81 +6,373 @@
   <meta name="theme-color" content="#0f766e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Lumière de Vie Pharma Checkout</title>
+  <title>Lumiere de Vie Pharma Checkout</title>
   <link rel="manifest" href="manifest.webmanifest">
   <style>
-    :root{--bg:#f5eee5;--text:#231815;--muted:#74655f;--panel:#fffffff5;--border:#a67b5b33;--primary:#9d6b3f;--primary-dark:#7e512b;--success:#496a4f;--success-soft:#e3f0e5;--danger:#a53d4b;--danger-soft:#fde7eb;--warning:#ad7a1f;--warning-soft:#fff0cf;--info:#2f6f73;--info-soft:#dff2f1;--shadow:0 28px 70px rgba(68,42,24,.14);--radius:24px}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top left,#9d6b3f22,transparent 28%),radial-gradient(circle at top right,#2f6f731f,transparent 24%),linear-gradient(180deg,#fbf6ef 0,var(--bg) 38%,#fffdfa 100%)}
-    .shell{max-width:1200px;margin:0 auto;padding:28px 20px 40px}
-    .hero{background:linear-gradient(135deg,#261611 0,#6d4a31 60%,#2f6f73 100%);color:#fff;padding:26px;border-radius:30px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
-    .eyebrow{display:inline-flex;padding:8px 12px;border-radius:999px;background:#ffffff1f;border:1px solid #ffffff26;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
-    .hero h1{margin:10px 0 0;font-size:clamp(28px,4vw,42px)}
-    .hero p{margin:10px 0 0;color:#ffffffcc;max-width:640px;line-height:1.5}
-    .btn{border:0;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;transition:transform .18s ease,opacity .18s ease,background .18s ease}
-    .btn:hover{transform:translateY(-1px)}
-    .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
-    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
-    .btn-secondary{background:#e9ddd0;color:#4a3428}
-    .btn-soft{background:#f8eee4;color:#7e512b}
-    .btn-warning{background:var(--warning-soft);color:var(--warning)}
-    .status-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}
-    .status-tile{padding:16px 18px;border-radius:20px;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow)}
-    .status-tile p{margin:0;color:var(--muted);font-size:13px}
-    .status-tile strong{display:block;margin-top:6px;font-size:24px}
-    .layout{display:grid;grid-template-columns:1.15fr .95fr;gap:22px;margin-top:24px;align-items:start}
-    .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
-    .section-title{margin:0 0 6px;font-size:22px}
-    .section-subtitle{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.5}
-    .item-list,.summary,.action-row,.method-grid{display:grid;gap:12px}
-    .method-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .method-card{padding:14px;border:1px solid var(--border);border-radius:18px;background:#fff;cursor:pointer}
-    .method-card.active{border-color:#0f766e88;box-shadow:0 0 0 4px rgba(15,118,110,.08)}
-    .method-card strong{display:block;margin-bottom:4px}
-    .item{display:flex;justify-content:space-between;gap:16px;border:1px solid var(--border);border-radius:16px;padding:14px 16px;background:#fff}
-    .summary-row{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}
-    .summary-row.total{color:var(--text);font-size:20px;font-weight:800;padding-top:14px;border-top:1px solid var(--border)}
-    .qr-wrap{display:grid;gap:16px;justify-items:center;text-align:center}
-    .qr-frame{width:min(100%,360px);background:linear-gradient(180deg,#fff,#ecfeff);border:1px solid var(--border);border-radius:24px;padding:18px}
-    .qr-frame img{display:block;width:100%;max-width:280px;margin:0 auto;border-radius:16px}
-    .upi-box,.status-box,.session-box{width:100%;padding:14px 16px;border-radius:16px;background:#f8fafc;color:#0f172a;font-weight:700;word-break:break-word}
-    .status-box{font-size:16px}
-    .status-pending{background:var(--warning-soft);color:var(--warning)}
-    .status-paid{background:var(--success-soft);color:var(--success)}
-    .status-failed{background:var(--danger-soft);color:var(--danger)}
-    .session-box{background:var(--info-soft);color:var(--info)}
-    .message{margin-top:18px;padding:14px 16px;border-radius:16px;font-weight:700;display:none}
-    .message.error{display:block;background:var(--danger-soft);color:var(--danger)}
-    .message.success{display:block;background:var(--success-soft);color:var(--success)}
-    .empty{margin:0;padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px}
-    .note{margin-top:12px;color:var(--muted);font-size:13px;line-height:1.6}
-    .brand-loader{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top left,rgba(157,107,63,.18),transparent 28%),radial-gradient(circle at bottom right,rgba(47,111,115,.16),transparent 26%),linear-gradient(180deg,#fbf6ef 0,var(--bg) 38%,#fffdfa 100%);transition:opacity .35s ease,visibility .35s ease}
-    .brand-loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
-    .brand-loader-card{width:min(460px,100%);padding:32px 28px;border-radius:28px;background:#fffffff2;border:1px solid var(--border);box-shadow:var(--shadow);text-align:center}
-    .brand-loader-mark{width:72px;height:72px;margin:0 auto 18px;border-radius:24px;background:linear-gradient(135deg,#261611 0,#6d4a31 56%,#2f6f73 100%);display:grid;place-items:center;color:#fff;font-size:28px;font-weight:900;letter-spacing:.04em}
-    .brand-loader-card h2{margin:0;font-size:28px}
-    .brand-loader-card p{margin:10px 0 0;color:var(--muted);line-height:1.6}
-    .brand-loader-bar{width:100%;height:8px;margin-top:20px;border-radius:999px;background:#f0e4d7;overflow:hidden}
-    .brand-loader-bar span{display:block;width:42%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9d6b3f,#2f6f73);animation:loader-slide 1.1s ease-in-out infinite alternate}
-    @keyframes loader-slide{from{transform:translateX(-18%)}to{transform:translateX(138%)}}
-    @media (max-width:960px){.layout,.method-grid,.status-strip{grid-template-columns:1fr}}
+    :root {
+      --bg: #f6f1e8;
+      --panel: rgba(255, 252, 247, 0.94);
+      --panel-strong: #ffffff;
+      --text: #241915;
+      --muted: #756760;
+      --border: rgba(166, 123, 91, 0.16);
+      --primary: #9d6b3f;
+      --primary-dark: #7e512b;
+      --accent: #2f6f73;
+      --success: #496a4f;
+      --success-soft: #e6f2e8;
+      --warning: #ad7a1f;
+      --warning-soft: #fff3d8;
+      --danger: #a53d4b;
+      --danger-soft: #fde9ed;
+      --info-soft: #e1f2f2;
+      --shadow: 0 28px 75px rgba(68, 42, 24, 0.14);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(157, 107, 63, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(47, 111, 115, 0.12), transparent 24%),
+        linear-gradient(180deg, #fbf7f0 0%, var(--bg) 42%, #fffdfa 100%);
+    }
+
+    .brand-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top left, rgba(157, 107, 63, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(47, 111, 115, 0.16), transparent 26%),
+        linear-gradient(180deg, #fbf6ef 0%, var(--bg) 38%, #fffdfa 100%);
+      transition: opacity .35s ease, visibility .35s ease;
+    }
+
+    .brand-loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .brand-loader-card {
+      width: min(460px, 100%);
+      padding: 32px 28px;
+      border-radius: 28px;
+      background: rgba(255, 251, 246, 0.95);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .brand-loader-mark {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 18px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .brand-loader-card h2 { margin: 0; font-size: 28px; }
+    .brand-loader-card p { margin: 10px 0 0; color: var(--muted); line-height: 1.6; }
+    .brand-loader-bar { width: 100%; height: 8px; margin-top: 20px; border-radius: 999px; background: #f0e4d7; overflow: hidden; }
+    .brand-loader-bar span { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9d6b3f, #2f6f73); animation: loader-slide 1.1s ease-in-out infinite alternate; }
+    @keyframes loader-slide { from { transform: translateX(-18%); } to { transform: translateX(138%); } }
+
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 28px 30px;
+      border-radius: 32px;
+      color: white;
+      background:
+        radial-gradient(circle at top right, rgba(255, 240, 222, 0.18), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(255,255,255,0.12), transparent 24%),
+        linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 { margin: 10px 0 0; font-size: clamp(30px, 4vw, 46px); }
+    .hero p { margin: 12px 0 0; max-width: 700px; color: rgba(255,255,255,0.82); line-height: 1.6; }
+
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .18s ease, opacity .18s ease, background .18s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: #f1e4d7; color: #4a3428; }
+    .btn-soft { background: #f9efe5; color: #7e512b; }
+    .btn-warning { background: var(--warning-soft); color: var(--warning); }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .status-tile,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .status-tile {
+      padding: 16px 18px;
+    }
+
+    .status-tile p { margin: 0; color: var(--muted); font-size: 13px; }
+    .status-tile strong { display: block; margin-top: 6px; font-size: 24px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 22px;
+      margin-top: 24px;
+      align-items: start;
+    }
+
+    .panel { padding: 22px; }
+    .section-title { margin: 0 0 6px; font-size: 22px; }
+    .section-subtitle { margin: 0 0 16px; color: var(--muted); line-height: 1.55; }
+
+    .item-list,
+    .summary,
+    .action-row,
+    .method-grid,
+    .payment-stack,
+    .scan-card-meta,
+    .tip-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .item {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: var(--panel-strong);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+    }
+
+    .summary-row.total {
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .method-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .method-card {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--panel-strong);
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .method-card:hover { transform: translateY(-1px); }
+    .method-card.active {
+      border-color: rgba(47, 111, 115, 0.45);
+      box-shadow: 0 0 0 4px rgba(47, 111, 115, 0.08);
+    }
+
+    .method-card strong { display: block; margin-bottom: 4px; }
+
+    .scan-card {
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+      text-align: center;
+      padding: 20px;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at top, rgba(47, 111, 115, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, #f8f4ee 100%);
+      border: 1px solid var(--border);
+    }
+
+    .scan-card-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #78b03c;
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 22px;
+      text-transform: lowercase;
+    }
+
+    .scan-card-head strong { display: block; font-size: 20px; }
+    .scan-card-head span { color: var(--muted); font-size: 13px; }
+
+    .qr-shell {
+      width: min(100%, 360px);
+      padding: 18px;
+      border-radius: 26px;
+      background: white;
+      box-shadow: 0 18px 40px rgba(36, 25, 21, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .qr-shell img {
+      width: 100%;
+      display: block;
+      border-radius: 18px;
+      background: white;
+    }
+
+    .upi-inline,
+    .session-box,
+    .status-box {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .upi-inline {
+      background: #f6f7fb;
+      color: #1f2937;
+      text-align: center;
+    }
+
+    .session-box {
+      background: var(--info-soft);
+      color: var(--accent);
+    }
+
+    .status-box { font-size: 16px; }
+    .status-pending { background: var(--warning-soft); color: var(--warning); }
+    .status-paid { background: var(--success-soft); color: var(--success); }
+    .status-failed { background: var(--danger-soft); color: var(--danger); }
+
+    .tip-list {
+      width: 100%;
+      text-align: left;
+    }
+
+    .tip-item {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .tip-item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+
+    .message {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-weight: 700;
+      display: none;
+    }
+
+    .message.error { display: block; background: var(--danger-soft); color: var(--danger); }
+    .message.success { display: block; background: var(--success-soft); color: var(--success); }
+    .empty { margin: 0; padding: 16px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 16px; }
+    .note { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    @media (max-width: 980px) {
+      .layout,
+      .status-strip,
+      .method-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="brandLoader" class="brand-loader">
     <div class="brand-loader-card">
       <div class="brand-loader-mark">LV</div>
-      <h2>Lumière de Vie Checkout</h2>
-      <p>Preparing live payment controls and order review.</p>
+      <h2>Lumiere de Vie Checkout</h2>
+      <p>Preparing premium payment review, QR scan, and bill confirmation.</p>
       <div class="brand-loader-bar"><span></span></div>
     </div>
   </div>
+
   <div class="shell">
     <div class="hero">
       <div>
         <div class="eyebrow">Final Billing Step</div>
-        <h1>Lumière de Vie Checkout</h1>
-        <p>Review the order, confirm how the customer paid, and create the bill only after payment is clearly marked as received.</p>
+        <h1>Counter Checkout With Premium UPI Flow</h1>
+        <p>Review the bill, show the customer the same QR image, and create the final invoice only after payment is clearly received.</p>
       </div>
       <button class="btn btn-secondary" onclick="backToApp()">Back to App</button>
     </div>
@@ -96,7 +388,7 @@
     <div class="layout">
       <div class="panel">
         <h2 class="section-title">Order Summary</h2>
-        <p class="section-subtitle">Confirm the customer details and medicine lines before completing payment.</p>
+        <p class="section-subtitle">Double-check customer details, quantities, discount, and total before asking for payment.</p>
         <div id="items" class="item-list"></div>
         <div class="summary">
           <div class="summary-row"><span>Customer</span><strong id="customerSummary">Walk-in</strong></div>
@@ -109,251 +401,311 @@
         </div>
       </div>
 
-      <div class="panel">
-        <h2 class="section-title">Payment Confirmation</h2>
-        <p class="section-subtitle">Choose the payment mode. The bill is created only after the payment is confirmed from this panel.</p>
+      <div class="panel payment-stack">
+        <div>
+          <h2 class="section-title">Payment Confirmation</h2>
+          <p class="section-subtitle">Use UPI QR, cash, or COD. The bill is generated only after you confirm payment from this screen.</p>
+        </div>
+
         <div class="method-grid">
-          <div class="method-card active" id="method-upi" onclick="setMethod('manual-upi')"><strong>UPI / QR</strong><div class="note">Customer scans the QR and you confirm once payment is received.</div></div>
-          <div class="method-card" id="method-cash" onclick="setMethod('cash')"><strong>Cash</strong><div class="note">Use for money collected at the counter.</div></div>
-          <div class="method-card" id="method-cod" onclick="setMethod('cash-on-delivery')"><strong>Cash On Delivery</strong><div class="note">Use for home delivery orders settled later.</div></div>
+          <div class="method-card active" id="method-upi" onclick="setMethod('manual-upi')"><strong>UPI / QR</strong><div class="note">Show the customer the QR and confirm after payment is received.</div></div>
+          <div class="method-card" id="method-cash" onclick="setMethod('cash')"><strong>Cash</strong><div class="note">Use when money is collected at the counter.</div></div>
+          <div class="method-card" id="method-cod" onclick="setMethod('cash-on-delivery')"><strong>Cash On Delivery</strong><div class="note">Use for delivery orders settled later.</div></div>
         </div>
-        <div class="qr-wrap" id="upiPanel" style="margin-top:18px;">
-          <div class="qr-frame"><img src="qr.png" alt="UPI QR Code"></div>
-          <div class="upi-box">UPI ID: udityasharma029@okaxis</div>
+
+        <div class="scan-card" id="upiPanel">
+          <div class="scan-card-head">
+            <div class="avatar">u</div>
+            <div>
+              <strong>uditya sharma</strong>
+              <span>Preferred UPI receiver</span>
+            </div>
+          </div>
+
+          <div class="qr-shell">
+            <img src="qr.png" alt="UPI QR Code">
+          </div>
+
+          <div class="upi-inline">UPI ID: udityasharma029@okaxis</div>
+
+          <div class="tip-list">
+            <div class="tip-item"><strong>Step 1</strong>Ask the customer to scan the QR with any UPI app.</div>
+            <div class="tip-item"><strong>Step 2</strong>Verify money received on your side before confirming.</div>
+            <div class="tip-item"><strong>Step 3</strong>Create the bill only after payment is marked as received.</div>
+          </div>
         </div>
-        <div id="statusBox" class="status-box status-pending" style="margin-top:16px;">Payment status: waiting for confirmation</div>
-        <div id="sessionBox" class="session-box" style="margin-top:12px;">Reference: preparing payment session...</div>
-        <div class="action-row" style="margin-top:18px">
-          <button class="btn btn-primary" id="refreshBtn" onclick="checkPaymentStatus()">Check Payment</button>
+
+        <div id="statusBox" class="status-box status-pending">Payment status: waiting for confirmation</div>
+        <div id="sessionBox" class="session-box">Reference: preparing payment session...</div>
+
+        <div class="action-row">
+          <button class="btn btn-soft" id="refreshBtn" onclick="checkPaymentStatus()">Check Payment</button>
           <button class="btn btn-primary" id="confirmBtn" onclick="confirmCurrentMethod()">Confirm Payment Received</button>
-          <button class="btn btn-warning" id="manualUpiBtn" onclick="confirmManualUpiReceipt()">Confirm UPI Received</button>
+          <button class="btn btn-primary" id="manualUpiBtn" onclick="confirmManualUpiReceipt()">Confirm UPI Received</button>
           <button class="btn btn-secondary" onclick="backToApp()">Return Without Billing</button>
         </div>
-          <p class="note" id="helperText">For UPI, ask the customer to scan the QR and then confirm receipt only after the payment arrives. Cash and COD are confirmed using the `Confirm Payment Received` button.</p>
+
+        <p class="note" id="helperText">For UPI, let the customer scan the QR and confirm only after payment arrives. Cash and COD are confirmed using the payment button.</p>
       </div>
     </div>
   </div>
 
   <script src="api-base.js"></script>
   <script>
-    function hideBrandLoader(){document.getElementById("brandLoader")?.classList.add("hidden")}
+    function hideBrandLoader() { document.getElementById("brandLoader")?.classList.add("hidden"); }
     window.addEventListener("pageshow", event => {
-      if(event.persisted)window.location.reload();
+      if (event.persisted) window.location.reload();
     });
 
-    const URL=ensureApiBaseUrl();
-    const cart=JSON.parse(localStorage.getItem("pendingCheckoutCart")||"[]");
-    const customer=JSON.parse(localStorage.getItem("pendingCustomer")||"null");
-    let paymentSessionId="";
-    let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
-    let pollTimer=null;
-    let isFinalizingPayment=false;
-    let checkoutSummary={
-      subtotalAmount:0,
-      discountAmount:0,
-      totalAmount:0,
-      customer:customer
+    const URL = ensureApiBaseUrl();
+    const cart = JSON.parse(localStorage.getItem("pendingCheckoutCart") || "[]");
+    const customer = JSON.parse(localStorage.getItem("pendingCustomer") || "null");
+    const pendingStore = JSON.parse(localStorage.getItem("pendingStore") || "null");
+    const orderSource = localStorage.getItem("pendingOrderSource") || "in_store";
+    const customerContext = localStorage.getItem("pendingCustomerContext") || "staff_controlled";
+    let paymentSessionId = "";
+    let paymentMethod = localStorage.getItem("paymentMethod") || "manual-upi";
+    let pollTimer = null;
+    let isFinalizingPayment = false;
+    let checkoutSummary = {
+      subtotalAmount: 0,
+      discountAmount: 0,
+      totalAmount: 0,
+      customer
     };
-    if(!localStorage.getItem("token"))window.location.replace(`index.html?t=${Date.now()}`);
+    if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
-    function getToken(){return localStorage.getItem("token")||""}
+    function getToken() { return localStorage.getItem("token") || ""; }
+    function setMessage(text, type = "") { message.className = "message"; message.textContent = text || ""; if (!text) { message.style.display = "none"; return; } message.classList.add(type || "success"); message.style.display = "block"; }
+    function authHeaders(extra = {}) { return { ...extra, Authorization: "Bearer " + getToken() }; }
+    async function fetchJson(path, options = {}) {
+      const response = await fetch(URL + path, { ...options, cache: "no-store", headers: authHeaders(options.headers || {}) });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        localStorage.clear();
+        window.location.replace(`index.html?t=${Date.now()}`);
+        throw new Error("Session expired");
+      }
+      if (!response.ok) throw new Error(data.message || "Request failed");
+      return data;
+    }
+    const formatAmount = value => "Rs " + Number(value || 0).toFixed(2);
 
-    function setMessage(text,type=""){message.className="message";message.textContent=text||"";if(!text){message.style.display="none";return}message.classList.add(type||"success");message.style.display="block"}
-    function authHeaders(extra={}){return{...extra,Authorization:"Bearer "+getToken()}}
-    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,cache:"no-store",headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.replace(`index.html?t=${Date.now()}`);throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
-    const formatAmount=v=>"Rs "+Number(v||0).toFixed(2);
-    function setPaymentActionState(isBusy){
-      isFinalizingPayment=isBusy;
-      refreshBtn.disabled=isBusy;
-      confirmBtn.disabled=isBusy;
-      manualUpiBtn.disabled=isBusy;
-      confirmBtn.textContent=isBusy?"Processing...":paymentMethod==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
-      manualUpiBtn.textContent=isBusy?"Processing...":"Confirm UPI Received";
+    function setPaymentActionState(isBusy) {
+      isFinalizingPayment = isBusy;
+      refreshBtn.disabled = isBusy;
+      confirmBtn.disabled = isBusy;
+      manualUpiBtn.disabled = isBusy;
+      confirmBtn.textContent = isBusy ? "Processing..." : paymentMethod === "manual-upi" ? "Confirm After UPI Receipt" : "Confirm Payment Received";
+      manualUpiBtn.textContent = isBusy ? "Processing..." : "Confirm UPI Received";
     }
 
-    function renderOrder(){
-        if(!cart.length){
-          items.innerHTML='<p class="empty">No checkout items found. Go back to the app and add items to the cart first.</p>';
-          refreshBtn.disabled=true;confirmBtn.disabled=true;manualUpiBtn.disabled=true;
-          return;
-        }
-      let totalValue=0,units=0;
-      const activeCustomer=checkoutSummary.customer||customer;
-      items.innerHTML=cart.map(item=>{
-        const lineTotal=Number(item.price)*Number(item.quantity);
-        totalValue+=lineTotal;units+=Number(item.quantity);
+    function renderOrder() {
+      if (!cart.length) {
+        items.innerHTML = '<p class="empty">No checkout items found. Go back to the app and add items to the cart first.</p>';
+        refreshBtn.disabled = true;
+        confirmBtn.disabled = true;
+        manualUpiBtn.disabled = true;
+        return;
+      }
+
+      let totalValue = 0;
+      let units = 0;
+      const activeCustomer = checkoutSummary.customer || customer;
+      items.innerHTML = cart.map(item => {
+        const lineTotal = Number(item.price) * Number(item.quantity);
+        totalValue += lineTotal;
+        units += Number(item.quantity);
         return `<div class="item"><div><strong>${item.name}</strong><div style="color:#64748b;margin-top:4px">${item.quantity} x ${formatAmount(item.price)}</div></div><strong>${formatAmount(lineTotal)}</strong></div>`;
       }).join("");
-      itemCount.textContent=String(cart.length);
-      unitCount.textContent=String(units);
-      topItemCount.textContent=String(cart.length);
-      topUnitCount.textContent=String(units);
-      customerSummary.textContent=activeCustomer?.phone ? `${activeCustomer.name || "Customer"} (${activeCustomer.phone})` : "Walk-in";
-      memberSummary.textContent=activeCustomer?.isMember || activeCustomer?.membership ? "Yes" : "No";
-      const subtotalValue=Number(checkoutSummary.subtotalAmount||totalValue);
-      const discountValue=Number(checkoutSummary.discountAmount||0);
-      const totalValueFromServer=Number(checkoutSummary.totalAmount||Math.max(0,subtotalValue-discountValue));
-      subtotal.textContent=formatAmount(subtotalValue);
-      discount.textContent=formatAmount(discountValue);
-      total.textContent=formatAmount(totalValueFromServer);
-      topTotal.textContent=formatAmount(totalValueFromServer);
+
+      itemCount.textContent = String(cart.length);
+      unitCount.textContent = String(units);
+      topItemCount.textContent = String(cart.length);
+      topUnitCount.textContent = String(units);
+      customerSummary.textContent = activeCustomer?.phone ? `${activeCustomer.name || "Customer"} (${activeCustomer.phone})` : "Walk-in";
+      memberSummary.textContent = activeCustomer?.isMember || activeCustomer?.membership ? "Yes" : "No";
+      const subtotalValue = Number(checkoutSummary.subtotalAmount || totalValue);
+      const discountValue = Number(checkoutSummary.discountAmount || 0);
+      const totalValueFromServer = Number(checkoutSummary.totalAmount || Math.max(0, subtotalValue - discountValue));
+      subtotal.textContent = formatAmount(subtotalValue);
+      discount.textContent = formatAmount(discountValue);
+      total.textContent = formatAmount(totalValueFromServer);
+      topTotal.textContent = formatAmount(totalValueFromServer);
     }
 
-    function updateStatusBox(status,reference=""){
-      statusBox.className="status-box";
-      if(status==="PAID"||status==="BILLED")statusBox.classList.add("status-paid");
-      else if(status==="FAILED")statusBox.classList.add("status-failed");
+    function updateStatusBox(status, reference = "") {
+      statusBox.className = "status-box";
+      if (status === "PAID" || status === "BILLED") statusBox.classList.add("status-paid");
+      else if (status === "FAILED") statusBox.classList.add("status-failed");
       else statusBox.classList.add("status-pending");
-      statusBox.textContent=`Payment status: ${status}${reference?` | Ref: ${reference}`:""}`;
+      statusBox.textContent = `Payment status: ${status}${reference ? ` | Ref: ${reference}` : ""}`;
     }
 
-    function updateHelperText(){
-      helperText.textContent=paymentMethod==="manual-upi"
-        ? "For UPI, let the customer scan the QR and confirm after money is received."
-        : paymentMethod==="cash"
-          ? "Cash billing will complete after you confirm that money has been collected."
-          : "Use this when a delivery order is paid on handover, then confirm to create the bill.";
+    function updateHelperText() {
+      helperText.textContent = paymentMethod === "manual-upi"
+        ? "Let the customer scan the QR and confirm only after you receive payment."
+        : paymentMethod === "cash"
+          ? "Cash billing will complete after you confirm that money has been collected at the counter."
+          : "Use this for delivery orders that are paid when the order is handed over.";
     }
 
-    function setMethod(method){
-      paymentMethod=method;
-      localStorage.setItem("paymentMethod",paymentMethod);
-      ["manual-upi","cash","cash-on-delivery"].forEach(value=>{
-        document.getElementById(`method-${value==="manual-upi"?"upi":value==="cash"?"cash":"cod"}`).classList.toggle("active",value===method);
-        });
-        upiPanel.style.display=method==="manual-upi"?"grid":"none";
-        manualUpiBtn.style.display=method==="manual-upi"?"inline-block":"none";
-        refreshBtn.style.display=method==="manual-upi"?"inline-block":"none";
-        confirmBtn.textContent=method==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
-        updateHelperText();
-      }
+    function setMethod(method) {
+      paymentMethod = method;
+      localStorage.setItem("paymentMethod", paymentMethod);
+      ["manual-upi", "cash", "cash-on-delivery"].forEach(value => {
+        document.getElementById(`method-${value === "manual-upi" ? "upi" : value === "cash" ? "cash" : "cod"}`).classList.toggle("active", value === method);
+      });
+      upiPanel.style.display = method === "manual-upi" ? "grid" : "none";
+      manualUpiBtn.style.display = method === "manual-upi" ? "inline-block" : "none";
+      refreshBtn.style.display = method === "manual-upi" ? "inline-block" : "none";
+      confirmBtn.textContent = method === "manual-upi" ? "Confirm After UPI Receipt" : "Confirm Payment Received";
+      updateHelperText();
+    }
 
-    async function createPaymentSession(forceNew=false){
-      if(!cart.length)return;
-      if(forceNew){
-        paymentSessionId="";
+    async function createPaymentSession(forceNew = false) {
+      if (!cart.length) return;
+      if (forceNew) {
+        paymentSessionId = "";
         localStorage.removeItem("paymentSessionId");
       }
-      if(paymentSessionId)return;
-      const data=await fetchJson("/payments/session",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({items:cart,provider:paymentMethod,customer:customer||{}})
+      if (paymentSessionId) return;
+      const data = await fetchJson("/payments/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: cart, provider: paymentMethod, customer: customer || {}, source: orderSource, customerContext, store: pendingStore || {} })
       });
-      paymentSessionId=data.sessionId;
-      localStorage.setItem("paymentSessionId",paymentSessionId);
-      checkoutSummary={
-        subtotalAmount:Number(data.subtotalAmount||0),
-        discountAmount:Number(data.discountAmount||0),
-        totalAmount:Number(data.totalAmount||0),
-        customer:data.customer||customer
+      paymentSessionId = data.sessionId;
+      localStorage.setItem("paymentSessionId", paymentSessionId);
+      checkoutSummary = {
+        subtotalAmount: Number(data.subtotalAmount || 0),
+        discountAmount: Number(data.discountAmount || 0),
+        totalAmount: Number(data.totalAmount || 0),
+        customer: data.customer || customer
       };
-      sessionBox.textContent=`Reference: ${paymentSessionId}`;
+      sessionBox.textContent = `Reference: ${paymentSessionId}`;
       updateStatusBox(data.status);
       renderOrder();
     }
 
-    async function generateBill(){
-      const wasAlreadyBusy=isFinalizingPayment;
-      if(!wasAlreadyBusy)setPaymentActionState(true);
-      try{
-        const data=await fetchJson("/bills",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({paymentSessionId})
+    async function generateBill() {
+      const wasAlreadyBusy = isFinalizingPayment;
+      if (!wasAlreadyBusy) setPaymentActionState(true);
+      try {
+        const data = await fetchJson("/bills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentSessionId })
         });
-      localStorage.removeItem("pendingCheckoutCart");
-      localStorage.removeItem("pendingCustomer");
-      localStorage.removeItem("pharmacyCart");
-      localStorage.removeItem("paymentSessionId");
+        localStorage.removeItem("pendingCheckoutCart");
+        localStorage.removeItem("pendingCustomer");
+        localStorage.removeItem("pendingOrderSource");
+        localStorage.removeItem("pendingCustomerContext");
+        localStorage.removeItem("pendingStore");
+        localStorage.removeItem("pharmacyCart");
+        localStorage.removeItem("paymentSessionId");
         localStorage.removeItem("paymentMethod");
-        setMessage("Payment confirmed. Bill created for "+formatAmount(data.totalAmount)+".","success");
+        setMessage(`Payment confirmed. Bill created for ${formatAmount(data.totalAmount)}.`, "success");
         updateStatusBox("BILLED");
         clearInterval(pollTimer);
-        setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1400);
-      }catch(error){setMessage(error.message,"error");if(!wasAlreadyBusy)setPaymentActionState(false);}
+        setTimeout(() => { window.location.replace(`app.html?v=${Date.now()}`); }, 1400);
+      } catch (error) {
+        setMessage(error.message, "error");
+        if (!wasAlreadyBusy) setPaymentActionState(false);
       }
+    }
 
-    async function checkPaymentStatus(){
-      if(isFinalizingPayment)return;
-      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
-      if(paymentMethod!=="manual-upi"){setMessage("Use the confirm button for cash or cash on delivery.","error");return;}
-      try{
-        const data=await fetchJson(`/payments/session/${paymentSessionId}`);
-        const session=data.session;
-        paymentMethod=session.provider||paymentMethod;
-        sessionBox.textContent=`Reference: ${session.id} | Method: ${paymentMethod}`;
-        updateStatusBox(session.status,session.paymentReference);
-        if(session.status==="PAID"){
+    async function checkPaymentStatus() {
+      if (isFinalizingPayment) return;
+      if (!paymentSessionId) { setMessage("Payment reference is not ready yet.", "error"); return; }
+      if (paymentMethod !== "manual-upi") { setMessage("Use the confirm button for cash or cash on delivery.", "error"); return; }
+      try {
+        const data = await fetchJson(`/payments/session/${paymentSessionId}`);
+        const session = data.session;
+        paymentMethod = session.provider || paymentMethod;
+        sessionBox.textContent = `Reference: ${session.id} | Method: ${paymentMethod}`;
+        updateStatusBox(session.status, session.paymentReference);
+        if (session.status === "PAID") {
           await generateBill();
-        }else if(session.status==="BILLED"){
+        } else if (session.status === "BILLED") {
           localStorage.removeItem("pendingCheckoutCart");
           localStorage.removeItem("pharmacyCart");
           localStorage.removeItem("paymentSessionId");
           localStorage.removeItem("paymentMethod");
           localStorage.removeItem("pendingCustomer");
-          setMessage("Bill was already created for this payment.","success");
-          setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1200);
-        }else{
-          setMessage("UPI payment is still pending. Confirm only after the payment arrives.","error");
+          localStorage.removeItem("pendingOrderSource");
+          localStorage.removeItem("pendingCustomerContext");
+          localStorage.removeItem("pendingStore");
+          setMessage("Bill was already created for this payment.", "success");
+          setTimeout(() => { window.location.replace(`app.html?v=${Date.now()}`); }, 1200);
+        } else {
+          setMessage("UPI payment is still pending. Confirm only after the payment arrives.", "error");
         }
-      }catch(error){setMessage(error.message,"error");}
+      } catch (error) {
+        setMessage(error.message, "error");
+      }
     }
 
-    async function confirmManualUpiReceipt(){
-      if(isFinalizingPayment)return;
-      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
-      try{
+    async function confirmManualUpiReceipt() {
+      if (isFinalizingPayment) return;
+      if (!paymentSessionId) { setMessage("Payment reference is not ready yet.", "error"); return; }
+      try {
         setPaymentActionState(true);
-        await fetchJson(`/payments/session/${paymentSessionId}/manual-confirm`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({paymentReference:`UPI-${Date.now()}`})
+        await fetchJson(`/payments/session/${paymentSessionId}/manual-confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentReference: `UPI-${Date.now()}` })
         });
         await generateBill();
-      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+      } catch (error) {
+        setMessage(error.message, "error");
+        setPaymentActionState(false);
+      }
     }
 
-    async function confirmCurrentMethod(){
-      if(isFinalizingPayment)return;
-      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
-      if(paymentMethod==="manual-upi"){
+    async function confirmCurrentMethod() {
+      if (isFinalizingPayment) return;
+      if (!paymentSessionId) { setMessage("Payment reference is not ready yet.", "error"); return; }
+      if (paymentMethod === "manual-upi") {
         await confirmManualUpiReceipt();
         return;
       }
-      try{
+      try {
         setPaymentActionState(true);
-        await fetchJson(`/payments/session/${paymentSessionId}/cash-received`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({provider:paymentMethod,paymentReference:`${paymentMethod.toUpperCase()}-${Date.now()}`})
+        await fetchJson(`/payments/session/${paymentSessionId}/cash-received`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: paymentMethod, paymentReference: `${paymentMethod.toUpperCase()}-${Date.now()}` })
         });
         await generateBill();
-      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+      } catch (error) {
+        setMessage(error.message, "error");
+        setPaymentActionState(false);
+      }
     }
 
-    function startPolling(){
+    function startPolling() {
       clearInterval(pollTimer);
-      pollTimer=setInterval(()=>{
-        if(paymentSessionId&&paymentMethod==="manual-upi"){
-          checkPaymentStatus().catch(()=>{});
+      pollTimer = setInterval(() => {
+        if (paymentSessionId && paymentMethod === "manual-upi") {
+          checkPaymentStatus().catch(() => {});
         }
-      },7000);
+      }, 7000);
     }
 
-    function backToApp(){window.location.replace(`app.html?v=${Date.now()}`)}
+    function backToApp() { window.location.replace(`app.html?v=${Date.now()}`); }
 
-    (async function init(){
+    (async function init() {
       renderOrder();
       setMethod(paymentMethod);
-      if(!cart.length)return;
-      try{
+      if (!cart.length) return;
+      try {
         await createPaymentSession(true);
         startPolling();
-      }catch(error){
-        setMessage(error.message,"error");
-      }finally{
-        setTimeout(hideBrandLoader,220);
+      } catch (error) {
+        setMessage(error.message, "error");
+      } finally {
+        setTimeout(hideBrandLoader, 220);
       }
     })();
   </script>

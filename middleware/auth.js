@@ -25,6 +25,7 @@ async function requireAuth(req, res, next) {
       username: user.username,
       role: user.role,
       fullName: user.fullName || "",
+      phone: user.phone || "",
       storeId: user.storeId || "",
       storeName: user.storeName || ""
     };

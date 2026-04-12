@@ -18,7 +18,16 @@ const paymentSessionSchema = new mongoose.Schema({
       brandId: String,
       name: String,
       price: Number,
-      quantity: Number
+      costPrice: Number,
+      quantity: Number,
+      category: String,
+      categoryType: String,
+      brandType: String,
+      lineSubtotal: Number,
+      discountPercent: Number,
+      discountAmount: Number,
+      total: Number,
+      profit: Number
     }
   ],
   totalAmount: Number,
@@ -43,9 +52,21 @@ const paymentSessionSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    membership: {
+      type: Boolean,
+      default: false
+    },
     membershipDiscountPercent: {
       type: Number,
       default: 0
+    },
+    visit_count: {
+      type: Number,
+      default: 0
+    },
+    last_purchase_date: {
+      type: Date,
+      default: null
     }
   },
   status: {

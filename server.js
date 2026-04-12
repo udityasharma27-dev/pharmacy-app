@@ -6,6 +6,7 @@ const cors = require("cors");
 
 const User = require("./models/User");
 const { hashPassword } = require("./utils/auth");
+const { startReminderScheduler } = require("./services/reminderScheduler");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -99,6 +100,7 @@ mongoose
   .then(async () => {
     console.log("DB Connected");
     await ensureDefaultUsers();
+    startReminderScheduler();
   })
   .catch(err => {
     console.error("Mongo connection failed", err);

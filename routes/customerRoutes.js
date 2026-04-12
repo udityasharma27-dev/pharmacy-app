@@ -23,7 +23,9 @@ router.get("/lookup/:phone", async (req, res) => {
     res.json({
       success: true,
       customer: customer || null,
-      isMember: !!customer?.isMember,
+      isMember: !!(customer?.membership ?? customer?.isMember),
+      membership: !!(customer?.membership ?? customer?.isMember),
+      visit_count: Number(customer?.visit_count || 0),
       discountPercent: Number(customer?.membershipDiscountPercent || 0)
     });
   } catch (error) {
@@ -37,7 +39,9 @@ router.post("/", async (req, res) => {
     const name = String(req.body.name || "").trim();
     const notes = String(req.body.notes || "").trim();
     const membershipDiscountPercent = Number(req.body.membershipDiscountPercent || 0);
-    const isMember = Boolean(req.body.isMember);
+    const membership = Boolean(req.body.membership ?? req.body.isMember);
+    const visit_count = Math.max(0, Number(req.body.visit_count || 0) || 0);
+    const last_purchase_date = req.body.last_purchase_date ? new Date(req.body.last_purchase_date) : null;
 
     if (!phone || phone.length < 10) {
       return res.status(400).json({ success: false, message: "Enter a valid phone number" });
@@ -47,16 +51,30 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ success: false, message: "Discount percent must be between 0 and 100" });
     }
 
+    if (req.body.last_purchase_date && Number.isNaN(last_purchase_date?.getTime())) {
+      return res.status(400).json({ success: false, message: "Last purchase date is invalid" });
+    }
+
     const existing = await Customer.findOne({ phone }).lean();
     const customer = await Customer.findOneAndUpdate(
       { phone },
-      { phone, name, notes, isMember, membershipDiscountPercent },
+      {
+        phone,
+        name,
+        notes,
+        isMember: membership,
+        membership,
+        visit_count,
+        last_purchase_date,
+        membershipDiscountPercent
+      },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
     await recordAudit(req, existing ? "customer.update" : "customer.create", "customer", customer._id, {
       phone: customer.phone,
-      isMember: customer.isMember,
+      membership: customer.membership,
+      visit_count: customer.visit_count,
       membershipDiscountPercent: customer.membershipDiscountPercent
     });
 

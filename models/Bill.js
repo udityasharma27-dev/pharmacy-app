@@ -7,6 +7,12 @@ const billSchema = new mongoose.Schema({
       quantity: Number,
       price: Number,
       costPrice: Number,
+      category: String,
+      categoryType: String,
+      brandType: String,
+      lineSubtotal: Number,
+      discountPercent: Number,
+      discountAmount: Number,
       total: Number
     }
   ],
@@ -22,6 +28,18 @@ const billSchema = new mongoose.Schema({
     isMember: {
       type: Boolean,
       default: false
+    },
+    membership: {
+      type: Boolean,
+      default: false
+    },
+    visit_count: {
+      type: Number,
+      default: 0
+    },
+    last_purchase_date: {
+      type: Date,
+      default: null
     }
   },
   store: {

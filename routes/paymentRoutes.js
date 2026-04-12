@@ -1,10 +1,21 @@
 const express = require("express");
 const router = express.Router();
+const Customer = require("../models/Customer");
+const Medicine = require("../models/Medicine");
 const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
+const {
+  buildCustomerSnapshot,
+  buildDiscountLine,
+  summarizeDiscountLines
+} = require("../services/discountService");
 
 function isManualUpiConfirmationAllowed() {
   return String(process.env.ALLOW_MANUAL_UPI_CONFIRM || "true").trim().toLowerCase() !== "false";
+}
+
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "").trim();
 }
 
 router.use(requireAuth);
@@ -13,7 +24,7 @@ router.post("/session", async (req, res) => {
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     const provider = String(req.body.provider || "manual-upi").trim() || "manual-upi";
-    const customer = req.body.customer || {};
+    const requestedCustomer = req.body.customer || {};
     const store = {
       storeId: String(req.body.store?.storeId || req.user.storeId || "").trim(),
       storeName: String(req.body.store?.storeName || req.user.storeName || "").trim()
@@ -23,27 +34,71 @@ router.post("/session", async (req, res) => {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
 
-    const subtotalAmount = items.reduce(
-      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
-      0
-    );
-    const discountPercent = Number(customer.membershipDiscountPercent || 0);
-    const discountAmount = subtotalAmount * (discountPercent / 100);
-    const totalAmount = Math.max(0, subtotalAmount - discountAmount);
+    const normalizedPhone = normalizePhone(requestedCustomer.phone);
+    const customerRecord = normalizedPhone
+      ? await Customer.findOne({ phone: normalizedPhone }).lean()
+      : null;
+    const customer = buildCustomerSnapshot(customerRecord, requestedCustomer);
+    const mergedItems = new Map();
+    const normalizedItems = [];
+
+    for (const item of items) {
+      const quantity = Number(item.quantity);
+
+      if (!item.medId || !item.brandId || !Number.isInteger(quantity) || quantity <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Each cart item must include a medicine, brand, and positive quantity"
+        });
+      }
+
+      const key = `${item.medId}:${item.brandId}`;
+      mergedItems.set(key, {
+        medId: item.medId,
+        brandId: item.brandId,
+        quantity: (mergedItems.get(key)?.quantity || 0) + quantity
+      });
+    }
+
+    for (const item of mergedItems.values()) {
+      const medicine = await Medicine.findById(item.medId);
+
+      if (!medicine) {
+        return res.status(404).json({ success: false, message: "Medicine not found" });
+      }
+
+      const brand = medicine.brands.id(item.brandId);
+
+      if (!brand) {
+        return res.status(404).json({ success: false, message: "Brand not found" });
+      }
+
+      normalizedItems.push(buildDiscountLine({
+        medicine,
+        brand,
+        quantity: item.quantity,
+        customer
+      }));
+    }
+
+    const totals = summarizeDiscountLines(normalizedItems);
 
     const session = await PaymentSession.create({
       userId: req.user.id,
       store,
-      items,
+      items: normalizedItems,
       customer: {
-        phone: String(customer.phone || "").trim(),
-        name: String(customer.name || "").trim(),
-        isMember: Boolean(customer.isMember),
-        membershipDiscountPercent: discountPercent
+        phone: customer.phone,
+        name: customer.name,
+        isMember: customer.membership,
+        membership: customer.membership,
+        membershipDiscountPercent: 0,
+        visit_count: customer.visit_count,
+        last_purchase_date: customer.last_purchase_date
       },
-      subtotalAmount,
-      discountAmount,
-      totalAmount,
+      subtotalAmount: totals.subtotalAmount,
+      discountAmount: totals.discountAmount,
+      totalAmount: totals.totalAmount,
       provider
     });
 
@@ -53,7 +108,8 @@ router.post("/session", async (req, res) => {
       status: session.status,
       totalAmount: session.totalAmount,
       subtotalAmount: session.subtotalAmount,
-      discountAmount: session.discountAmount
+      discountAmount: session.discountAmount,
+      customer: session.customer
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Unable to create payment session" });

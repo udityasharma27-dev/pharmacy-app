@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const Customer = require("../models/Customer");
 const Medicine = require("../models/Medicine");
 const Bill = require("../models/Bill");
 const PaymentSession = require("../models/PaymentSession");
@@ -111,33 +112,48 @@ router.post("/", async (req, res) => {
 
     let subtotal = 0;
     let totalProfit = 0;
+    let discountAmount = 0;
     const billItems = [];
 
     for (const item of preparedItems) {
-      const cost = item.brand.price * item.quantity;
-      const profit = (item.brand.price - item.brand.costPrice) * item.quantity;
-      subtotal += cost;
-      totalProfit += profit;
+      const sessionItem = items.find(entry => String(entry.medId) === String(item.med._id) && String(entry.brandId) === String(item.brand._id));
+      const lineSubtotal = Number(sessionItem?.lineSubtotal ?? (item.brand.price * item.quantity));
+      const lineDiscountAmount = Number(sessionItem?.discountAmount || 0);
+      const lineTotal = Number(sessionItem?.total ?? Math.max(0, lineSubtotal - lineDiscountAmount));
+      const lineProfit = Number(sessionItem?.profit ?? (lineTotal - (Number(item.brand.costPrice || 0) * item.quantity)));
+
+      subtotal += lineSubtotal;
+      discountAmount += lineDiscountAmount;
+      totalProfit += lineProfit;
       item.brand.quantity -= item.quantity;
 
       billItems.push({
-        name: item.brand.name,
+        name: sessionItem?.name || item.brand.name,
         quantity: item.quantity,
-        price: item.brand.price,
-        costPrice: item.brand.costPrice,
-        total: cost
+        price: Number(sessionItem?.price ?? item.brand.price),
+        costPrice: Number(sessionItem?.costPrice ?? item.brand.costPrice),
+        category: sessionItem?.category || item.med.category || "General",
+        categoryType: sessionItem?.categoryType || "",
+        brandType: sessionItem?.brandType || item.brand.brandType || "Branded",
+        lineSubtotal,
+        discountPercent: Number(sessionItem?.discountPercent || 0),
+        discountAmount: lineDiscountAmount,
+        total: lineTotal
       });
 
       await item.med.save();
     }
 
-    const discountAmount = Number(paymentSession.discountAmount || 0);
     const total = Math.max(0, subtotal - discountAmount);
     const invoiceNumber = await buildInvoiceNumber();
 
     const bill = new Bill({
       items: billItems,
-      customer: paymentSession.customer || {},
+      customer: {
+        ...(paymentSession.customer || {}),
+        membership: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
+        isMember: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember)
+      },
       store: paymentSession.store || {},
       createdBy: {
         userId: req.user.id,
@@ -159,8 +175,31 @@ router.post("/", async (req, res) => {
     paymentSession.billId = bill._id;
     await paymentSession.save();
 
+    const customerPhone = String(paymentSession.customer?.phone || "").replace(/\D/g, "").trim();
+    if (customerPhone.length >= 10) {
+      await Customer.findOneAndUpdate(
+        { phone: customerPhone },
+        {
+          $inc: { visit_count: 1 },
+          $set: {
+            name: String(paymentSession.customer?.name || "").trim(),
+            isMember: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
+            membership: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
+            last_purchase_date: bill.createdAt
+          },
+          $setOnInsert: {
+            phone: customerPhone,
+            membershipDiscountPercent: 0,
+            notes: ""
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+
     await recordAudit(req, "bill.create", "bill", bill._id, {
       totalAmount: bill.totalAmount,
+      discountAmount: bill.discountAmount,
       totalProfit: bill.totalProfit,
       storeId: bill.store?.storeId || "",
       storeName: bill.store?.storeName || "",

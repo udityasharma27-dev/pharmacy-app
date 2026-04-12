@@ -133,7 +133,10 @@ router.post("/backup/import", async (req, res) => {
         {
           name: customer.name || "",
           phone: customer.phone,
-          isMember: Boolean(customer.isMember),
+          isMember: Boolean(customer.membership ?? customer.isMember),
+          membership: Boolean(customer.membership ?? customer.isMember),
+          visit_count: Math.max(0, Number(customer.visit_count || 0) || 0),
+          last_purchase_date: customer.last_purchase_date || null,
           membershipDiscountPercent: Number(customer.membershipDiscountPercent || 0),
           notes: customer.notes || ""
         },

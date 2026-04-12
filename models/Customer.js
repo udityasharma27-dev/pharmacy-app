@@ -14,6 +14,18 @@ const customerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  membership: {
+    type: Boolean,
+    default: false
+  },
+  visit_count: {
+    type: Number,
+    default: 0
+  },
+  last_purchase_date: {
+    type: Date,
+    default: null
+  },
   membershipDiscountPercent: {
     type: Number,
     default: 0

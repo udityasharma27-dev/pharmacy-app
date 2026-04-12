@@ -34,6 +34,7 @@ let isRefreshingData = false;
 let refreshTimer = null;
 let isSubmittingTransfer = false;
 let hasCompletedInitialRender = false;
+let appExperienceMode = localStorage.getItem("appExperienceMode") || "customer";
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -82,6 +83,7 @@ const formatInvoiceNumber = bill => bill?.invoiceNumber || `INV-${String(bill?._
 const saveCart = () => localStorage.setItem("pharmacyCart", JSON.stringify(cart));
 const saveCustomer = () => localStorage.setItem("selectedCustomer", JSON.stringify(selectedCustomer));
 const isOwner = () => currentUser?.role === "owner";
+const isCustomerMode = () => appExperienceMode === "customer";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -174,6 +176,48 @@ function applyFormMemoryIfEmpty() {
   const categoryInput = document.getElementById("categoryInput");
   if (supplierInput && !supplierInput.value && formMemory.supplier) supplierInput.value = formMemory.supplier;
   if (categoryInput && !categoryInput.value && formMemory.category) categoryInput.value = formMemory.category;
+}
+
+function applyExperienceMode() {
+  document.body.classList.toggle("customer-mode", isCustomerMode());
+  document.body.classList.toggle("staff-mode", !isCustomerMode());
+  localStorage.setItem("appExperienceMode", appExperienceMode);
+
+  const heroEyebrow = document.getElementById("heroEyebrow");
+  const heroTitle = document.querySelector(".hero-copy h1");
+  const heroDescription = document.getElementById("heroDescription");
+  const billingTitle = document.getElementById("billingTitle");
+  const billingSubtitle = document.getElementById("billingSubtitle");
+  const loaderText = document.getElementById("brandLoaderText");
+  const staffBtn = document.getElementById("staffModeBtn");
+  const customerBtn = document.getElementById("customerModeBtn");
+
+  if (heroEyebrow) heroEyebrow.textContent = isCustomerMode() ? "Customer Storefront" : "Counter Workspace";
+  if (heroTitle) heroTitle.textContent = heroTitle.textContent || "Lumiere de Vie Pharma";
+  if (heroDescription) {
+    heroDescription.textContent = isCustomerMode()
+      ? "Turn the counter into a welcoming in-store experience with guided discovery, membership savings, and a fast checkout flow."
+      : "Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.";
+  }
+  if (billingTitle) billingTitle.textContent = isCustomerMode() ? "Customer Checkout Desk" : "Billing Desk";
+  if (billingSubtitle) {
+    billingSubtitle.textContent = isCustomerMode()
+      ? "Search medicines, confirm customer details, and build a polished cart while the shopper is standing at the counter."
+      : "Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.";
+  }
+  if (loaderText) {
+    loaderText.textContent = isCustomerMode()
+      ? "Preparing product discovery, membership savings, and live checkout."
+      : "Loading inventory, team insights, and live store controls.";
+  }
+  if (staffBtn) staffBtn.classList.toggle("active", !isCustomerMode());
+  if (customerBtn) customerBtn.classList.toggle("active", isCustomerMode());
+}
+
+function toggleExperienceMode(mode) {
+  appExperienceMode = mode === "staff" ? "staff" : "customer";
+  applyExperienceMode();
+  renderAll();
 }
 
 function setMedicineSaveState(isSaving) {
@@ -603,6 +647,286 @@ function renderInventory() {
   });
 }
 
+function getCustomerTheme(label) {
+  const value = normalize(label);
+  if (value.includes("skin") || value.includes("beauty")) return { tone: "linear-gradient(135deg, #ffe3ee, #fff7fb)", badge: "SK" };
+  if (value.includes("diabetes") || value.includes("bp") || value.includes("heart")) return { tone: "linear-gradient(135deg, #e4f8ff, #f8feff)", badge: "HT" };
+  if (value.includes("pain") || value.includes("fever")) return { tone: "linear-gradient(135deg, #fff2db, #fffaf0)", badge: "RF" };
+  if (value.includes("digest") || value.includes("stomach")) return { tone: "linear-gradient(135deg, #f4ebff, #fcf8ff)", badge: "DG" };
+  return { tone: "linear-gradient(135deg, #e2faf4, #f7fffd)", badge: String(label || "MD").slice(0, 2).toUpperCase() };
+}
+
+function renderProductThumb(label, theme) {
+  return `<div class="product-thumb" style="background:${theme.tone};"><span>${escapeHtml(theme.badge)}</span></div>`;
+}
+
+function syncCustomerSearch(value) {
+  const billingSearch = document.getElementById("billingSearch");
+  const inventorySearch = document.getElementById("searchInput");
+  if (billingSearch) billingSearch.value = value;
+  if (inventorySearch) inventorySearch.value = value;
+  renderAll();
+}
+
+function renderCustomerHeader() {
+  const nav = document.getElementById("customerNavBar");
+  const storeLabel = document.getElementById("customerHeaderStore");
+  const search = document.getElementById("customerSearchBar");
+  if (!nav || !storeLabel || !search) return;
+
+  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
+  storeLabel.textContent = activeStore?.name || currentUser?.storeName || "your nearest store";
+  if (search.value !== document.getElementById("billingSearch")?.value) {
+    search.value = document.getElementById("billingSearch")?.value || "";
+  }
+
+  const topCategories = medicines
+    .map(item => item.category || "General Wellness")
+    .filter((value, index, list) => list.indexOf(value) === index)
+    .slice(0, 6);
+
+  nav.innerHTML = topCategories.map(category => `
+    <button class="customer-nav-link" type="button" onclick="focusCategorySearch('${String(category).replace(/'/g, "\\'")}')">${escapeHtml(category)}</button>
+  `).join("");
+}
+
+function getCustomerFilteredChoices() {
+  const categoryFilter = document.getElementById("customerCategoryFilter")?.value || "all";
+  const typeFilter = document.getElementById("customerTypeFilter")?.value || "all";
+  const sortValue = document.getElementById("customerPriceSort")?.value || "popular";
+  const query = normalize(document.getElementById("billingSearch")?.value || "");
+
+  const filtered = getAllAvailableChoices().filter(item => {
+    const matchesQuery = !query || [item.salt, item.brandName, item.category, item.supplier].some(value => normalize(value).includes(query));
+    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+    const matchesType = typeFilter === "all" || item.brandType === typeFilter;
+    return matchesQuery && matchesCategory && matchesType;
+  });
+
+  filtered.sort((a, b) => {
+    if (sortValue === "price-low") return a.price - b.price;
+    if (sortValue === "price-high") return b.price - a.price;
+    if (sortValue === "stock") return b.quantity - a.quantity;
+    return b.quantity - a.quantity || a.price - b.price;
+  });
+
+  return filtered;
+}
+
+function resetCustomerCatalog() {
+  const category = document.getElementById("customerCategoryFilter");
+  const type = document.getElementById("customerTypeFilter");
+  const sort = document.getElementById("customerPriceSort");
+  const billingSearch = document.getElementById("billingSearch");
+  const inventorySearch = document.getElementById("searchInput");
+  const customerSearch = document.getElementById("customerSearchBar");
+  if (category) category.value = "all";
+  if (type) type.value = "all";
+  if (sort) sort.value = "popular";
+  if (billingSearch) billingSearch.value = "";
+  if (inventorySearch) inventorySearch.value = "";
+  if (customerSearch) customerSearch.value = "";
+  renderAll();
+}
+
+function renderCustomerExperience() {
+  const benefitsBox = document.getElementById("customerBenefits");
+  const serviceBox = document.getElementById("customerServiceCards");
+  const categoryBox = document.getElementById("customerCategoryChips");
+  const shelfBox = document.getElementById("customerShelf");
+  const inventoryBox = document.getElementById("customerInventoryList");
+  const catalogHeader = document.getElementById("customerCatalogHeader");
+  const faqBox = document.getElementById("customerFaq");
+  const categoryFilter = document.getElementById("customerCategoryFilter");
+  const filterTags = document.getElementById("customerFilterTags");
+
+  if (!benefitsBox || !serviceBox || !categoryBox || !shelfBox || !inventoryBox || !catalogHeader || !faqBox || !categoryFilter || !filterTags) return;
+
+  const choices = getAllAvailableChoices();
+  const categoryMap = medicines.reduce((acc, medicine) => {
+    const category = medicine.category || "General Wellness";
+    if (!acc.has(category)) acc.set(category, { salts: 0, brands: 0 });
+    const entry = acc.get(category);
+    entry.salts += 1;
+    entry.brands += (medicine.brands || []).filter(brand => Number(brand.quantity || 0) > 0).length;
+    return acc;
+  }, new Map());
+
+  const topCategories = Array.from(categoryMap.entries())
+    .sort((a, b) => b[1].brands - a[1].brands)
+    .slice(0, 4);
+
+  const popularItems = Array.from(new Map(
+    choices
+      .slice()
+      .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
+      .slice(0, 6)
+      .map(item => [`${item.medicineId}:${item.brandId}`, item])
+  ).values());
+
+  const availableBrands = choices.length;
+  const activeStore = stores.find(store => String(store._id) === String(activeStoreId));
+  const savingsText = selectedCustomer?.isMember
+    ? `${selectedCustomer.membershipDiscountPercent || 0}% member savings ready`
+    : "Membership savings available at the counter";
+
+  renderCustomerHeader();
+
+  const categoryOptions = ['<option value="all">All categories</option>']
+    .concat(Array.from(categoryMap.keys()).sort((a, b) => a.localeCompare(b)).map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`))
+    .join("");
+  if (categoryFilter.innerHTML !== categoryOptions) categoryFilter.innerHTML = categoryOptions;
+
+  const filteredChoices = getCustomerFilteredChoices();
+  const activeCategory = document.getElementById("customerCategoryFilter")?.value || "all";
+  const activeType = document.getElementById("customerTypeFilter")?.value || "all";
+  const activeSort = document.getElementById("customerPriceSort")?.value || "popular";
+  const query = document.getElementById("billingSearch")?.value?.trim() || "";
+  const headingLabel = activeCategory !== "all" ? activeCategory : query ? query : "Health concerns";
+  const querySentence = query
+    ? `Showing customer-ready products that match "${escapeHtml(query)}".`
+    : "Browse medicines by category, compare trusted brands, and help shoppers choose the right option faster.";
+
+  catalogHeader.innerHTML = `
+    <div class="customer-breadcrumbs"><span>Home</span> &rsaquo; Medicines &rsaquo; ${escapeHtml(headingLabel)}</div>
+    <h2>${escapeHtml(headingLabel)} Medicines</h2>
+    <p>${querySentence}</p>
+  `;
+
+  filterTags.innerHTML = [
+    activeCategory !== "all" ? activeCategory : "All categories",
+    activeType !== "all" ? activeType : "All products",
+    activeSort === "popular" ? "Popular first" : activeSort === "price-low" ? "Lowest price first" : activeSort === "price-high" ? "Highest price first" : "Highest stock first"
+  ].map(tag => `<span class="customer-filter-tag">${escapeHtml(tag)}</span>`).join("");
+
+  benefitsBox.innerHTML = [
+    {
+      label: "Available today",
+      value: `${availableBrands}+`,
+      detail: "medicine options ready to discover and bill right now"
+    },
+    {
+      label: "Fast help",
+      value: "Counter guided",
+      detail: "a pharmacist or staff member can help compare options instantly"
+    },
+    {
+      label: "Member savings",
+      value: selectedCustomer?.isMember ? "Savings active" : "Ask today",
+      detail: savingsText
+    }
+  ].map(item => `
+    <div class="customer-benefit-card">
+      <p>${escapeHtml(item.label)}</p>
+      <strong>${escapeHtml(item.value)}</strong>
+      <span>${escapeHtml(item.detail)}</span>
+    </div>
+  `).join("");
+
+  serviceBox.innerHTML = [
+    {
+      tone: "primary",
+      title: "Order from prescription",
+      body: "Upload or read out the prescription at the counter and let the staff quickly search the right medicines for you."
+    },
+    {
+      tone: "secondary",
+      title: "No prescription?",
+      body: "Browse by health concern, compare options, and ask staff to guide you toward suitable OTC products."
+    },
+    {
+      tone: "accent",
+      title: "Membership & repeat orders",
+      body: `Save time on repeat purchases with phone-based lookup at ${activeStore?.name || "this store"} and faster checkout for regular customers.`
+    }
+  ].map(item => `
+    <div class="customer-service-card ${item.tone}">
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.body)}</p>
+    </div>
+  `).join("");
+
+  categoryBox.innerHTML = topCategories.length
+    ? topCategories.map(([category, info]) => `
+      <button class="customer-category-chip" type="button" onclick="focusCategorySearch('${String(category).replace(/'/g, "\\'")}')">
+        ${renderProductThumb(category, getCustomerTheme(category))}
+        <strong>${escapeHtml(category)}</strong>
+        <div class="meta">${info.salts} salts | ${info.brands} available brands</div>
+      </button>
+    `).join("")
+    : '<p class="empty">Add medicines to highlight customer-ready categories.</p>';
+
+  shelfBox.innerHTML = popularItems.length
+    ? popularItems.map(item => `
+      <div class="customer-shelf-card">
+        ${renderProductThumb(item.brandName, getCustomerTheme(item.category))}
+        <strong>${escapeHtml(item.salt)} - ${escapeHtml(item.brandName)}</strong>
+        <div class="meta">${escapeHtml(item.category)} | ${escapeHtml(item.brandType)} | ${formatAmount(item.price)}</div>
+        <div class="product-pill-row">
+          <span class="product-pill">${item.quantity} in stock</span>
+          <span class="product-pill">${escapeHtml(item.brandType)}</span>
+        </div>
+        <div class="actions-row" style="margin-top:12px;">
+          <button class="btn btn-soft" type="button" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">View</button>
+          <button class="btn btn-primary" type="button" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add ${quickQuantityValue}</button>
+        </div>
+      </div>
+    `).join("")
+    : '<p class="empty">No customer-ready products are available yet.</p>';
+
+  inventoryBox.innerHTML = filteredChoices.length
+    ? `
+      <div class="customer-results-head">
+        <strong>Showing ${filteredChoices.length} products for ${escapeHtml(headingLabel)}</strong>
+        <div class="customer-sort-pill">Sort by: ${escapeHtml(activeSort === "popular" ? "Popularity" : activeSort === "price-low" ? "Price Low to High" : activeSort === "price-high" ? "Price High to Low" : "Stock availability")}</div>
+      </div>
+      <div class="customer-result-grid">${filteredChoices.slice(0, 12).map(item => {
+        const theme = getCustomerTheme(item.category || item.salt);
+        const oldPrice = item.price * 1.18;
+        const discount = Math.max(5, Math.round(((oldPrice - item.price) / oldPrice) * 100));
+        return `
+          <div class="customer-product-card">
+            ${renderProductThumb(item.brandName, theme)}
+            <h3>${escapeHtml(item.brandName)}</h3>
+            <div class="customer-product-meta">${escapeHtml(item.salt)} | ${escapeHtml(item.category)}</div>
+            <div class="customer-product-meta">${escapeHtml(item.supplier || "Trusted supplier")} | ${item.quantity} in stock</div>
+            <div class="customer-price-line">
+              <strong>${formatAmount(item.price)}</strong>
+              <span>${discount}% OFF</span>
+            </div>
+            <div class="customer-product-meta"><s>${formatAmount(oldPrice)}</s> | ${escapeHtml(item.brandType)}</div>
+            <div class="customer-delivery-note">Available today at ${escapeHtml(activeStore?.name || currentUser?.storeName || "your store")}</div>
+            <div class="product-pill-row">
+              <span class="product-pill">${escapeHtml(item.brandType)}</span>
+              <span class="product-pill">${escapeHtml(item.category)}</span>
+            </div>
+            <div class="actions-row" style="margin-top:12px;">
+              <button class="btn btn-soft" type="button" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">View</button>
+              <button class="btn btn-primary" type="button" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add</button>
+            </div>
+          </div>
+        `;
+      }).join("")}</div>
+    `
+    : '<p class="empty">No medicines match the current filters. Try another category or clear the search.</p>';
+
+  faqBox.innerHTML = `
+    <h3>Frequently Asked Questions</h3>
+    <div class="customer-faq-item">
+      <strong>Can I switch from a branded medicine to a generic?</strong>
+      <p>Generics may contain the same active ingredient, but it is best to confirm the right option with the pharmacist before billing.</p>
+    </div>
+    <div class="customer-faq-item">
+      <strong>How do I choose the right dosage?</strong>
+      <p>Dosage depends on age, symptoms, and existing prescriptions. Ask the pharmacist before adding it to the cart if you are unsure.</p>
+    </div>
+    <div class="customer-faq-item">
+      <strong>Do I need a prescription?</strong>
+      <p>Prescription medicines should only be billed when a valid prescription is available. OTC products can be selected directly from the storefront.</p>
+    </div>
+  `;
+}
+
 function renderAlerts() {
   const container = document.getElementById("alertPanel");
   const alerts = [];
@@ -907,14 +1231,15 @@ function renderSelectedMedicineCard() {
     expiryDate: selectedBillingChoice.expiryDate
   });
   const expiry = selectedBillingChoice.expiryDate ? formatDate(selectedBillingChoice.expiryDate) : "N/A";
+  const isCustomerFacing = isCustomerMode();
 
   box.innerHTML = `
     <strong>${escapeHtml(selectedBillingChoice.salt)} - ${escapeHtml(selectedBillingChoice.brandName)}</strong>
-    <div class="meta">${escapeHtml(selectedBillingChoice.brandType)} | Stock ${selectedBillingChoice.quantity} | Sell ${formatAmount(selectedBillingChoice.price)} | Supplier ${escapeHtml(selectedBillingChoice.supplier)}</div>
-    <div class="meta">Batch ${escapeHtml(selectedBillingChoice.batchNumber || "N/A")} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}</div>
+    <div class="meta">${escapeHtml(selectedBillingChoice.brandType)} | ${formatAmount(selectedBillingChoice.price)} | ${isCustomerFacing ? `${selectedBillingChoice.quantity} ready now` : `Stock ${selectedBillingChoice.quantity}`}</div>
+    <div class="meta">${isCustomerFacing ? `Category ${escapeHtml(selectedBillingChoice.category)} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}` : `Batch ${escapeHtml(selectedBillingChoice.batchNumber || "N/A")} | Barcode ${escapeHtml(selectedBillingChoice.barcode || "N/A")} | Expiry ${escapeHtml(expiry)}`}</div>
     <div class="chip-row" style="margin-top:12px;">
       <span class="tag ${state.level === "healthy" ? "good" : state.level === "low-stock" ? "low" : "warn"}">${escapeHtml(state.text)}</span>
-      <span class="tag info">Counter ready</span>
+      <span class="tag info">${isCustomerFacing ? "Ready for cart" : "Counter ready"}</span>
     </div>
   `;
 }
@@ -941,9 +1266,9 @@ function renderBillingFinder() {
     <div class="suggestion-card">
       <strong>${escapeHtml(item.salt)} - ${escapeHtml(item.brandName)}</strong>
       <div class="meta">${escapeHtml(item.category)} | ${escapeHtml(item.brandType)} | ${item.quantity} in stock | ${formatAmount(item.price)}</div>
-      <div class="meta">Barcode ${escapeHtml(item.barcode || "N/A")} | Supplier ${escapeHtml(item.supplier)}</div>
+      <div class="meta">${isCustomerMode() ? `Ready for quick billing | Barcode ${escapeHtml(item.barcode || "N/A")}` : `Barcode ${escapeHtml(item.barcode || "N/A")} | Supplier ${escapeHtml(item.supplier)}`}</div>
       <div class="suggestion-actions" style="margin-top:12px;">
-        <button class="btn btn-soft" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">Select</button>
+        <button class="btn btn-soft" onclick="selectBillingMedicine('${item.medicineId}','${item.brandId}', true)">${isCustomerMode() ? "View" : "Select"}</button>
         <button class="btn btn-primary" onclick="quickAddItem('${item.medicineId}','${item.brandId}', ${quickQuantityValue})">Add ${quickQuantityValue}</button>
       </div>
     </div>
@@ -1034,9 +1359,13 @@ function renderCart() {
   const box = document.getElementById("cartBox");
   const dock = document.getElementById("cartDock");
   document.getElementById("cartCount").textContent = String(cart.length);
+  const customerCartCount = document.getElementById("customerCartCount");
+  if (customerCartCount) customerCartCount.textContent = String(cart.length);
+  const cartTitle = isCustomerMode() ? "Shopping Summary" : "Cart Summary";
+  const checkoutLabel = isCustomerMode() ? "Continue To Checkout" : "Open Checkout";
 
   if (!cart.length) {
-    box.innerHTML = '<h3 style="margin-top:0;">Cart</h3><p class="empty">Your cart is empty.</p>';
+    box.innerHTML = `<h3 style="margin-top:0;">${cartTitle}</h3><p class="empty">${isCustomerMode() ? "No medicines added yet. Search or browse to start building the order." : "Your cart is empty."}</p>`;
     dock.className = "cart-dock";
     dock.innerHTML = "";
     return;
@@ -1049,7 +1378,7 @@ function renderCart() {
   const finalTotal = Math.max(0, total - discountAmount);
 
   box.innerHTML = `
-    <h3 style="margin-top:0;">Cart Summary</h3>
+    <h3 style="margin-top:0;">${cartTitle}</h3>
     <div class="cart-list">
       ${cart.map((item, index) => `
         <div class="cart-item">
@@ -1062,10 +1391,10 @@ function renderCart() {
       `).join("")}
     </div>
     <div class="modal-header"><strong>Subtotal</strong><strong>${formatAmount(total)}</strong></div>
-    <div class="modal-header"><strong>Discount</strong><strong>${formatAmount(discountAmount)}</strong></div>
+    <div class="modal-header"><strong>${isCustomerMode() ? "Savings" : "Discount"}</strong><strong>${formatAmount(discountAmount)}</strong></div>
     <div class="modal-header"><strong>Total</strong><strong>${formatAmount(finalTotal)}</strong></div>
     <div class="actions-row" style="margin-top:16px;">
-      <button class="btn btn-primary" onclick="goToCheckout()">Open Checkout</button>
+      <button class="btn btn-primary" onclick="goToCheckout()">${checkoutLabel}</button>
       <button class="btn btn-secondary" onclick="clearCart()">Clear Cart</button>
     </div>
   `;
@@ -1079,7 +1408,7 @@ function renderCart() {
     </div>
     <div class="actions-row">
       <button class="btn btn-soft" onclick="toggleCart()">View Cart</button>
-      <button class="btn btn-primary" onclick="goToCheckout()">Checkout</button>
+      <button class="btn btn-primary" onclick="goToCheckout()">${isCustomerMode() ? "Checkout" : "Open Checkout"}</button>
     </div>
   `;
 }
@@ -1139,7 +1468,9 @@ function updateMembershipUi() {
   const discountInput = document.getElementById("memberDiscount");
 
   if (!selectedCustomer) {
-    status.textContent = "No customer selected. Continue as walk-in or search by phone.";
+    status.textContent = isCustomerMode()
+      ? "Add a phone number to check membership savings, or continue as a walk-in shopper."
+      : "No customer selected. Continue as walk-in or search by phone.";
     phoneInput.value = "";
     nameInput.value = "";
     discountInput.value = "0";
@@ -1150,8 +1481,10 @@ function updateMembershipUi() {
   nameInput.value = selectedCustomer.name || "";
   discountInput.value = String(Number(selectedCustomer.membershipDiscountPercent || 0));
   status.textContent = selectedCustomer.isMember
-    ? `Member found: ${selectedCustomer.name || "Customer"} | ${selectedCustomer.phone} | Discount ${selectedCustomer.membershipDiscountPercent || 0}%`
-    : `Non-member customer: ${selectedCustomer.phone}`;
+    ? `${selectedCustomer.name || "Customer"} is a member | ${selectedCustomer.phone} | Savings ${selectedCustomer.membershipDiscountPercent || 0}%`
+    : isCustomerMode()
+      ? `Customer found at ${selectedCustomer.phone} | not enrolled in membership yet`
+      : `Non-member customer: ${selectedCustomer.phone}`;
 }
 
 async function lookupCustomer() {
@@ -1667,6 +2000,33 @@ function focusBillingSearch() {
   document.getElementById("billingSearch").focus();
 }
 
+function focusCustomerSearch() {
+  if (!isCustomerMode()) {
+    appExperienceMode = "customer";
+    applyExperienceMode();
+  }
+  document.getElementById("billingSearch").scrollIntoView({ behavior: "smooth", block: "center" });
+  document.getElementById("billingSearch").focus();
+}
+
+function focusCustomerMembership() {
+  if (!isCustomerMode()) {
+    appExperienceMode = "customer";
+    applyExperienceMode();
+  }
+  document.getElementById("customerPhone").scrollIntoView({ behavior: "smooth", block: "center" });
+  document.getElementById("customerPhone").focus();
+}
+
+function focusCategorySearch(category) {
+  document.getElementById("billingSearch").value = category;
+  document.getElementById("searchInput").value = category;
+  const customerSearch = document.getElementById("customerSearchBar");
+  if (customerSearch) customerSearch.value = category;
+  renderAll();
+  focusCustomerSearch();
+}
+
 function focusBarcodeSearch() {
   document.getElementById("barcodeSearch").focus();
 }
@@ -1691,6 +2051,15 @@ function wireEvents() {
     renderSelectedMedicineCard();
   });
 
+  document.getElementById("billingSearch").addEventListener("input", event => {
+    const value = event.target.value;
+    const customerSearch = document.getElementById("customerSearchBar");
+    const inventorySearch = document.getElementById("searchInput");
+    if (customerSearch && customerSearch.value !== value) customerSearch.value = value;
+    if (inventorySearch && inventorySearch.value !== value) inventorySearch.value = value;
+    if (isCustomerMode()) renderCustomerExperience();
+  });
+
   document.getElementById("billQty").addEventListener("keydown", event => {
     if (event.key === "Enter") addToCart();
   });
@@ -1708,9 +2077,11 @@ function wireEvents() {
 }
 
 function renderAll() {
+  applyExperienceMode();
   updateStats();
   renderStoreControls();
   renderInventory();
+  renderCustomerExperience();
   renderAlerts();
   renderProfiles();
   renderTopSelling();
@@ -1731,6 +2102,7 @@ function renderAll() {
 }
 
 wireEvents();
+applyExperienceMode();
 setQuickQuantity(1);
 loadData();
 startAutoRefresh();

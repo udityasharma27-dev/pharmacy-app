@@ -22,14 +22,39 @@
       <div class="app-loader-bar"><span></span></div>
     </div>
   </div>
+  <header id="customerHeader" class="customer-mode-only customer-header">
+    <div class="customer-header-top">
+      <div class="customer-brand">
+        <div class="customer-brand-mark">LV</div>
+        <div>
+          <strong>LumiÃ¨re de Vie</strong>
+          <span>Storefront</span>
+        </div>
+      </div>
+      <div class="customer-delivery">Deliver to <strong id="customerHeaderStore">your nearest store</strong></div>
+      <label class="customer-search-shell" for="customerSearchBar">
+        <span>Search</span>
+        <input id="customerSearchBar" placeholder="Search for medicines, wellness items, and daily essentials" oninput="syncCustomerSearch(this.value)">
+      </label>
+      <div class="customer-header-actions">
+        <button class="customer-header-btn" type="button" onclick="toggleCart()">Cart <strong id="customerCartCount">0</strong></button>
+        <button class="customer-header-btn" type="button" onclick="focusCustomerMembership()">Membership</button>
+      </div>
+    </div>
+    <div id="customerNavBar" class="customer-nav-bar"></div>
+  </header>
   <div class="shell">
     <div class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Counter Workspace</div>
+        <div class="eyebrow" id="heroEyebrow">Counter Workspace</div>
         <h1>Lumière de Vie Pharma</h1>
-        <p>Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.</p>
+        <p id="heroDescription">Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.</p>
       </div>
       <div class="hero-actions">
+        <div class="mode-switch" role="tablist" aria-label="Experience mode">
+          <button class="mode-chip active" id="staffModeBtn" type="button" onclick="toggleExperienceMode('staff')">Staff View</button>
+          <button class="mode-chip" id="customerModeBtn" type="button" onclick="toggleExperienceMode('customer')">Customer View</button>
+        </div>
         <div class="pill">Role <strong id="roleLabel">Loading...</strong></div>
         <div class="pill">Store <strong id="activeStoreLabel">All Stores</strong></div>
         <div class="pill clickable-pill" onclick="toggleCart()">Cart <strong id="cartCount">0</strong></div>
@@ -39,7 +64,33 @@
 
     <div id="message" class="message"></div>
 
-    <div class="today-strip">
+    <section id="customerShowcase" class="customer-mode-only customer-showcase">
+      <div class="customer-promo-banner">
+        <div class="customer-promo-copy">
+          <div class="section-chip">Customer Experience</div>
+          <h2 id="customerPromoTitle">Smarter wellness shopping for every walk-in customer.</h2>
+          <p id="customerPromoText">Search by symptom, category, or product type, help shoppers discover the right options faster, and keep the cart moving with a modern checkout flow.</p>
+          <div class="customer-showcase-actions">
+            <button class="btn btn-primary" type="button" onclick="focusCustomerSearch()">Start Shopping</button>
+            <button class="btn btn-soft" type="button" onclick="focusCustomerMembership()">Check Membership</button>
+          </div>
+        </div>
+        <div id="customerBenefits" class="customer-benefits"></div>
+      </div>
+      <div id="customerServiceCards" class="customer-service-cards"></div>
+      <div class="customer-section-head">
+        <h3>Shop by health concern</h3>
+        <button class="mini-link" type="button" onclick="focusCustomerSearch()">View all</button>
+      </div>
+      <div id="customerCategoryChips" class="customer-category-chips"></div>
+      <div class="customer-section-head">
+        <h3>Popular products in store</h3>
+        <button class="mini-link" type="button" onclick="toggleCart()">Open cart</button>
+      </div>
+      <div id="customerShelf" class="customer-shelf"></div>
+    </section>
+
+    <div class="today-strip staff-mode-only">
       <div class="today-card accent-danger">
         <p>Needs Restock</p>
         <h3 id="restockNowCount">0</h3>
@@ -62,7 +113,7 @@
       </div>
     </div>
 
-    <div class="quickbar">
+    <div class="quickbar staff-mode-only">
       <div class="quickbar-copy">
         <h2>Quick actions</h2>
         <p>Jump straight to the task pharmacists do most often.</p>
@@ -78,7 +129,7 @@
       </div>
     </div>
 
-    <div class="stats">
+    <div class="stats staff-mode-only">
       <div class="stat-card"><p>Total Medicines</p><h3 id="totalMedicineCount">0</h3></div>
       <div class="stat-card"><p>Total Brands</p><h3 id="totalBrandCount">0</h3></div>
       <div class="stat-card"><p>Alerts</p><h3 id="lowStockCount">0</h3></div>
@@ -88,7 +139,7 @@
 
     <div class="layout">
       <div class="stack">
-        <div class="panel owner-only" id="ownerPanel" hidden>
+        <div class="panel owner-only staff-mode-only" id="ownerPanel" hidden>
           <h2 class="section-title">Inventory Editor</h2>
           <p class="section-subtitle">Use the compact form below to add stock faster without missing batch or expiry details.</p>
           <div class="editor-layout">
@@ -135,7 +186,7 @@
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel staff-mode-only">
           <h2 class="section-title">Inventory</h2>
           <p class="section-subtitle">Search by salt, brand, supplier, or batch and manage stock professionally.</p>
           <div class="toolbar">
@@ -151,13 +202,53 @@
           <div id="inventoryList" class="inventory-list"></div>
         </div>
 
-        <div class="panel">
+        <div class="panel customer-mode-only customer-catalog-panel">
+          <div id="customerCatalogHeader" class="customer-catalog-header"></div>
+          <div class="customer-catalog-layout">
+            <aside class="customer-filter-sidebar">
+              <div class="customer-filter-card">
+                <div class="customer-filter-head">
+                  <h3>Filters</h3>
+                  <button class="mini-link" type="button" onclick="resetCustomerCatalog()">Reset</button>
+                </div>
+                <div class="customer-filter-group">
+                  <label for="customerCategoryFilter">Category</label>
+                  <select id="customerCategoryFilter" onchange="renderAll()"></select>
+                </div>
+                <div class="customer-filter-group">
+                  <label for="customerTypeFilter">Product Type</label>
+                  <select id="customerTypeFilter" onchange="renderAll()">
+                    <option value="all">All products</option>
+                    <option value="Branded">Branded</option>
+                    <option value="Generic">Generic</option>
+                  </select>
+                </div>
+                <div class="customer-filter-group">
+                  <label for="customerPriceSort">Sort By</label>
+                  <select id="customerPriceSort" onchange="renderAll()">
+                    <option value="popular">Popularity</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="stock">Stock availability</option>
+                  </select>
+                </div>
+                <div id="customerFilterTags" class="customer-filter-tags"></div>
+              </div>
+            </aside>
+            <div class="customer-catalog-main">
+              <div id="customerInventoryList" class="customer-catalog-results"></div>
+            </div>
+          </div>
+          <div id="customerFaq" class="customer-faq"></div>
+        </div>
+
+        <div class="panel staff-mode-only">
           <h2 class="section-title">Top Selling Medicines</h2>
           <p class="section-subtitle">Quickly see the strongest movers for the selected store.</p>
           <div id="topSellingList" class="supplier-list"></div>
         </div>
 
-        <div class="panel owner-only" id="storePanel" hidden>
+        <div class="panel owner-only staff-mode-only" id="storePanel" hidden>
           <h2 class="section-title">Store Directory</h2>
           <p class="section-subtitle">Add branches and keep separate inventory for each location.</p>
           <div class="grid-3">
@@ -172,7 +263,7 @@
           <div id="storeList" class="supplier-list" style="margin-top:16px;"></div>
         </div>
 
-        <div class="panel owner-only" id="transferPanel" hidden>
+        <div class="panel owner-only staff-mode-only" id="transferPanel" hidden>
           <h2 class="section-title">Branch Stock Transfer</h2>
           <p class="section-subtitle">Move inventory between branches with a clean audit trail and transfer history.</p>
           <div class="grid-3">
@@ -201,8 +292,8 @@
 
       <div class="stack">
         <div class="panel">
-          <h2 class="section-title">Billing Desk</h2>
-          <p class="section-subtitle">Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.</p>
+          <h2 class="section-title" id="billingTitle">Billing Desk</h2>
+          <p class="section-subtitle" id="billingSubtitle">Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.</p>
           <div class="grid-3" style="margin-bottom:16px;">
             <div class="field"><label for="customerPhone">Customer Phone</label><input id="customerPhone" placeholder="10 digit phone"></div>
             <div class="field"><label for="customerName">Customer Name</label><input id="customerName" placeholder="Optional name"></div>
@@ -251,13 +342,13 @@
           </div>
         </div>
 
-        <div class="panel" id="alertSection">
+        <div class="panel staff-mode-only" id="alertSection">
           <h2 class="section-title">Alerts</h2>
           <p class="section-subtitle">Low stock and expiry alerts now include direct actions so nothing gets missed.</p>
           <div id="alertPanel" class="alert-list"></div>
         </div>
 
-        <div class="panel">
+        <div class="panel staff-mode-only">
           <h2 class="section-title">Profile & Team</h2>
           <p class="section-subtitle">Track attendance, salary credits, monthly patient bonus targets, and owner-managed staff accounts.</p>
           <div id="currentProfileCard" class="profile-card"></div>
@@ -291,13 +382,13 @@
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel staff-mode-only">
           <h2 class="section-title">Suppliers</h2>
           <p class="section-subtitle">Supplier summary generated from your inventory.</p>
           <div id="supplierPanel" class="supplier-list"></div>
         </div>
 
-        <div class="panel">
+        <div class="panel staff-mode-only">
           <h2 class="section-title">Bill History</h2>
           <p class="section-subtitle">Track revenue, profit, and print invoice copies.</p>
           <div id="billHistory" class="history-list"></div>

@@ -7,10 +7,23 @@
 
   function getDefaultBase() {
     if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+      const origin = normalizeBase(window.location.origin);
+      const isLocalHttpDev = window.location.protocol === "http:"
+        && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+      if (isLocalHttpDev) {
+        return origin;
+      }
+
       if (window.location.protocol === "https:" && window.location.hostname === "localhost") {
         return normalizeBase(PUBLIC_API_BASE);
       }
-      return normalizeBase(window.location.origin);
+
+      if (origin === normalizeBase(PUBLIC_API_BASE)) {
+        return origin;
+      }
+
+      return normalizeBase(PUBLIC_API_BASE);
     }
     return normalizeBase(PUBLIC_API_BASE);
   }

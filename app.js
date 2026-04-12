@@ -33,6 +33,7 @@ let isSavingMember = false;
 let isRefreshingData = false;
 let refreshTimer = null;
 let isSubmittingTransfer = false;
+let hasCompletedInitialRender = false;
 
 if (!localStorage.getItem("token")) window.location.replace(`index.html?t=${Date.now()}`);
 
@@ -46,6 +47,12 @@ function setMessage(text, type = "") {
   box.textContent = text || "";
   box.style.display = text ? "block" : "none";
   if (text) box.classList.add(type || "success");
+}
+
+function hideBrandLoader(delay = 180) {
+  const loader = document.getElementById("brandLoader");
+  if (!loader) return;
+  window.setTimeout(() => loader.classList.add("hidden"), delay);
 }
 
 function authHeaders(extra = {}) {
@@ -269,9 +276,14 @@ async function loadData() {
     }
 
     renderAll();
+    if (!hasCompletedInitialRender) {
+      hasCompletedInitialRender = true;
+      hideBrandLoader();
+    }
   } catch (error) {
     document.getElementById("roleLabel").textContent = localStorage.getItem("role") || "Sign in again";
     setMessage(error.message, "error");
+    if (!hasCompletedInitialRender) hideBrandLoader(0);
   } finally {
     isRefreshingData = false;
   }

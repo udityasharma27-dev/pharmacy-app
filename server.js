@@ -10,10 +10,14 @@ const { startReminderScheduler } = require("./services/reminderScheduler");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
+const MONGO_URI = String(process.env.MONGO_URI || "").trim();
 const OWNER_USERNAME = process.env.OWNER_USERNAME || "admin";
 const OWNER_PASSWORD = process.env.OWNER_PASSWORD || "123";
 const STAFF_USERNAME = process.env.STAFF_USERNAME || "staff";
 const STAFF_PASSWORD = process.env.STAFF_PASSWORD || "123";
+const MONGO_RETRY_MS = Number(process.env.MONGO_RETRY_MS || 15000);
+let hasStartedReminderScheduler = false;
+let mongoConnectPromise = null;
 
 app.disable("x-powered-by");
 app.use((req, res, next) => {
@@ -73,9 +77,10 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbConnected = dbState === 1;
-  res.status(dbConnected ? 200 : 503).json({
-    ok: dbConnected,
+  res.status(200).json({
+    ok: true,
     dbConnected,
+    dbState,
     uptimeSeconds: Math.round(process.uptime())
   });
 });
@@ -95,16 +100,66 @@ async function ensureDefaultUsers() {
   console.log("Default users created");
 }
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("DB Connected");
-    await ensureDefaultUsers();
-    startReminderScheduler();
+async function connectToMongo() {
+  if (!MONGO_URI) {
+    console.error("Mongo connection skipped: MONGO_URI is missing");
+    return false;
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    return true;
+  }
+
+  if (mongoConnectPromise) {
+    return mongoConnectPromise;
+  }
+
+  mongoConnectPromise = mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 10000
   })
-  .catch(err => {
-    console.error("Mongo connection failed", err);
-    process.exit(1);
-  });
+    .then(async () => {
+      console.log("DB Connected");
+      await ensureDefaultUsers();
+
+      if (!hasStartedReminderScheduler) {
+        startReminderScheduler();
+        hasStartedReminderScheduler = true;
+      }
+
+      return true;
+    })
+    .catch(error => {
+      console.error("Mongo connection failed", error);
+      return false;
+    })
+    .finally(() => {
+      mongoConnectPromise = null;
+    });
+
+  return mongoConnectPromise;
+}
+
+function scheduleMongoReconnect() {
+  setTimeout(async () => {
+    const connected = await connectToMongo();
+    if (!connected) {
+      scheduleMongoReconnect();
+    }
+  }, Math.max(1000, MONGO_RETRY_MS));
+}
+
+mongoose.connection.on("disconnected", () => {
+  console.warn("Mongo disconnected");
+  scheduleMongoReconnect();
+});
+
+mongoose.connection.on("error", error => {
+  console.error("Mongo error", error);
+});
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+connectToMongo().then(connected => {
+  if (!connected) {
+    scheduleMongoReconnect();
+  }
+});

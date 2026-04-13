@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+.env
+.env.*
+!.env.example
+android/.gradle
+android/build
+android/app/build
+web
+npm-debug.log*
+lumiere-de-vie-pharma-upload.zip

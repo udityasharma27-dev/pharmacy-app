@@ -22,6 +22,20 @@ function normalizePhone(phone) {
   return String(phone || "").replace(/\D/g, "").trim();
 }
 
+function getFallbackOfferConfig() {
+  return {
+    mondayMemberOffer: {
+      enabled: true,
+      extraDiscountPercent: 3
+    },
+    globalOffer: {
+      enabled: false,
+      discountPercent: 0,
+      label: "Global Offer"
+    }
+  };
+}
+
 router.use(requireAuth);
 
 router.post("/session", async (req, res) => {
@@ -55,11 +69,30 @@ router.post("/session", async (req, res) => {
 
     const effectiveCustomer = { ...fallbackCustomer, ...requestedCustomer };
     const normalizedPhone = normalizePhone(effectiveCustomer.phone);
-    const customerRecord = normalizedPhone
-      ? await Customer.findOne({ phone: normalizedPhone }).lean()
-      : null;
+    let customerRecord = null;
+
+    if (normalizedPhone) {
+      try {
+        customerRecord = await Customer.findOne({ phone: normalizedPhone }).lean();
+      } catch (error) {
+        console.warn("Customer lookup failed during payment session creation", {
+          message: error?.message,
+          phone: normalizedPhone
+        });
+      }
+    }
+
     const customer = buildCustomerSnapshot(customerRecord, effectiveCustomer);
-    const offerConfig = await getOfferConfig();
+    let offerConfig = getFallbackOfferConfig();
+
+    try {
+      offerConfig = await getOfferConfig();
+    } catch (error) {
+      console.warn("Offer config lookup failed during payment session creation", {
+        message: error?.message
+      });
+    }
+
     const mergedItems = new Map();
     const normalizedItems = [];
 
@@ -92,6 +125,13 @@ router.post("/session", async (req, res) => {
 
       if (!brand) {
         return res.status(404).json({ success: false, message: "Brand not found" });
+      }
+
+      if (Number(brand.quantity || 0) < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Not enough stock for ${brand.name}`
+        });
       }
 
       const line = buildDiscountLine({
@@ -156,7 +196,10 @@ router.post("/session", async (req, res) => {
       itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
       provider: req.body?.provider
     });
-    res.status(500).json({ success: false, message: "Unable to create payment session" });
+    const safeMessage = error?.name === "ValidationError"
+      ? "Payment session data is invalid"
+      : "Unable to create payment session";
+    res.status(500).json({ success: false, message: safeMessage });
   }
 });
 

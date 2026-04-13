@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Customer = require("../models/Customer");
 const Medicine = require("../models/Medicine");
 const PaymentSession = require("../models/PaymentSession");
@@ -25,6 +26,13 @@ router.use(requireAuth);
 
 router.post("/session", async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Database is not connected yet"
+      });
+    }
+
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     const provider = String(req.body.provider || "manual-upi").trim() || "manual-upi";
     const source = normalizeOrderSource(req.body.source);
@@ -141,6 +149,13 @@ router.post("/session", async (req, res) => {
       customer: session.customer
     });
   } catch (error) {
+    console.error("Payment session creation failed", {
+      message: error?.message,
+      stack: error?.stack,
+      userId: req.user?.id,
+      itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
+      provider: req.body?.provider
+    });
     res.status(500).json({ success: false, message: "Unable to create payment session" });
   }
 });

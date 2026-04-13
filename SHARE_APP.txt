@@ -1,0 +1,18 @@
+Lumiere de Vie Pharma Android App
+
+APK file:
+C:\Users\udity\pharmacy-app\share\Lumiere-de-Vie-Pharma.apk
+
+How to share:
+1. Open WhatsApp.
+2. Attach the APK as a Document.
+3. Send it to the target user.
+
+How to install:
+1. Download the APK on the Android phone.
+2. Open the file from WhatsApp or the Files app.
+3. Allow "Install unknown apps" if Android asks.
+4. Continue installation.
+
+Note:
+This is a debug build prepared for direct sharing/testing.

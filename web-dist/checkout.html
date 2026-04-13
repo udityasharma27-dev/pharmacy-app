@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Lumière de Vie Pharma Checkout</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{--bg:#f5eee5;--text:#231815;--muted:#74655f;--panel:#fffffff5;--border:#a67b5b33;--primary:#9d6b3f;--primary-dark:#7e512b;--success:#496a4f;--success-soft:#e3f0e5;--danger:#a53d4b;--danger-soft:#fde7eb;--warning:#ad7a1f;--warning-soft:#fff0cf;--info:#2f6f73;--info-soft:#dff2f1;--shadow:0 28px 70px rgba(68,42,24,.14);--radius:24px}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top left,#9d6b3f22,transparent 28%),radial-gradient(circle at top right,#2f6f731f,transparent 24%),linear-gradient(180deg,#fbf6ef 0,var(--bg) 38%,#fffdfa 100%)}
+    .shell{max-width:1200px;margin:0 auto;padding:28px 20px 40px}
+    .hero{background:linear-gradient(135deg,#261611 0,#6d4a31 60%,#2f6f73 100%);color:#fff;padding:26px;border-radius:30px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+    .eyebrow{display:inline-flex;padding:8px 12px;border-radius:999px;background:#ffffff1f;border:1px solid #ffffff26;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+    .hero h1{margin:10px 0 0;font-size:clamp(28px,4vw,42px)}
+    .hero p{margin:10px 0 0;color:#ffffffcc;max-width:640px;line-height:1.5}
+    .btn{border:0;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;transition:transform .18s ease,opacity .18s ease,background .18s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
+    .btn-secondary{background:#e9ddd0;color:#4a3428}
+    .btn-soft{background:#f8eee4;color:#7e512b}
+    .btn-warning{background:var(--warning-soft);color:var(--warning)}
+    .status-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}
+    .status-tile{padding:16px 18px;border-radius:20px;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow)}
+    .status-tile p{margin:0;color:var(--muted);font-size:13px}
+    .status-tile strong{display:block;margin-top:6px;font-size:24px}
+    .layout{display:grid;grid-template-columns:1.15fr .95fr;gap:22px;margin-top:24px;align-items:start}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+    .section-title{margin:0 0 6px;font-size:22px}
+    .section-subtitle{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.5}
+    .item-list,.summary,.action-row,.method-grid{display:grid;gap:12px}
+    .method-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .method-card{padding:14px;border:1px solid var(--border);border-radius:18px;background:#fff;cursor:pointer}
+    .method-card.active{border-color:#0f766e88;box-shadow:0 0 0 4px rgba(15,118,110,.08)}
+    .method-card strong{display:block;margin-bottom:4px}
+    .item{display:flex;justify-content:space-between;gap:16px;border:1px solid var(--border);border-radius:16px;padding:14px 16px;background:#fff}
+    .summary-row{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}
+    .summary-row.total{color:var(--text);font-size:20px;font-weight:800;padding-top:14px;border-top:1px solid var(--border)}
+    .qr-wrap{display:grid;gap:16px;justify-items:center;text-align:center}
+    .qr-frame{width:min(100%,360px);background:linear-gradient(180deg,#fff,#ecfeff);border:1px solid var(--border);border-radius:24px;padding:18px}
+    .qr-frame img{display:block;width:100%;max-width:280px;margin:0 auto;border-radius:16px}
+    .upi-box,.status-box,.session-box{width:100%;padding:14px 16px;border-radius:16px;background:#f8fafc;color:#0f172a;font-weight:700;word-break:break-word}
+    .status-box{font-size:16px}
+    .status-pending{background:var(--warning-soft);color:var(--warning)}
+    .status-paid{background:var(--success-soft);color:var(--success)}
+    .status-failed{background:var(--danger-soft);color:var(--danger)}
+    .session-box{background:var(--info-soft);color:var(--info)}
+    .message{margin-top:18px;padding:14px 16px;border-radius:16px;font-weight:700;display:none}
+    .message.error{display:block;background:var(--danger-soft);color:var(--danger)}
+    .message.success{display:block;background:var(--success-soft);color:var(--success)}
+    .empty{margin:0;padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px}
+    .note{margin-top:12px;color:var(--muted);font-size:13px;line-height:1.6}
+    @media (max-width:960px){.layout,.method-grid,.status-strip{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Final Billing Step</div>
+        <h1>Lumière de Vie Checkout</h1>
+        <p>Review the order, confirm how the customer paid, and create the bill only after payment is clearly marked as received.</p>
+      </div>
+      <button class="btn btn-secondary" onclick="backToApp()">Back to App</button>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="status-strip">
+      <div class="status-tile"><p>Items In Bill</p><strong id="topItemCount">0</strong></div>
+      <div class="status-tile"><p>Units</p><strong id="topUnitCount">0</strong></div>
+      <div class="status-tile"><p>Payable Amount</p><strong id="topTotal">Rs 0.00</strong></div>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <h2 class="section-title">Order Summary</h2>
+        <p class="section-subtitle">Confirm the customer details and medicine lines before completing payment.</p>
+        <div id="items" class="item-list"></div>
+        <div class="summary">
+          <div class="summary-row"><span>Customer</span><strong id="customerSummary">Walk-in</strong></div>
+          <div class="summary-row"><span>Membership</span><strong id="memberSummary">No</strong></div>
+          <div class="summary-row"><span>Items</span><strong id="itemCount">0</strong></div>
+          <div class="summary-row"><span>Units</span><strong id="unitCount">0</strong></div>
+          <div class="summary-row"><span>Subtotal</span><strong id="subtotal">Rs 0.00</strong></div>
+          <div class="summary-row"><span>Discount</span><strong id="discount">Rs 0.00</strong></div>
+          <div class="summary-row total"><span>Total</span><strong id="total">Rs 0.00</strong></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="section-title">Payment Confirmation</h2>
+        <p class="section-subtitle">Choose the payment mode. The bill is created only after the payment is confirmed from this panel.</p>
+        <div class="method-grid">
+          <div class="method-card active" id="method-upi" onclick="setMethod('manual-upi')"><strong>UPI / QR</strong><div class="note">Customer scans the QR and you confirm once payment is received.</div></div>
+          <div class="method-card" id="method-cash" onclick="setMethod('cash')"><strong>Cash</strong><div class="note">Use for money collected at the counter.</div></div>
+          <div class="method-card" id="method-cod" onclick="setMethod('cash-on-delivery')"><strong>Cash On Delivery</strong><div class="note">Use for home delivery orders settled later.</div></div>
+        </div>
+        <div class="qr-wrap" id="upiPanel" style="margin-top:18px;">
+          <div class="qr-frame"><img src="qr.png" alt="UPI QR Code"></div>
+          <div class="upi-box">UPI ID: udityasharma029@okaxis</div>
+        </div>
+        <div id="statusBox" class="status-box status-pending" style="margin-top:16px;">Payment status: waiting for confirmation</div>
+        <div id="sessionBox" class="session-box" style="margin-top:12px;">Reference: preparing payment session...</div>
+        <div class="action-row" style="margin-top:18px">
+          <button class="btn btn-primary" id="refreshBtn" onclick="checkPaymentStatus()">Check Payment</button>
+          <button class="btn btn-primary" id="confirmBtn" onclick="confirmCurrentMethod()">Confirm Payment Received</button>
+          <button class="btn btn-warning" id="manualUpiBtn" onclick="confirmManualUpiReceipt()">Confirm UPI Received</button>
+          <button class="btn btn-secondary" onclick="backToApp()">Return Without Billing</button>
+        </div>
+          <p class="note" id="helperText">For UPI, ask the customer to scan the QR and then confirm receipt only after the payment arrives. Cash and COD are confirmed using the `Confirm Payment Received` button.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="api-base.js"></script>
+  <script>
+    window.addEventListener("pageshow", event => {
+      if(event.persisted)window.location.reload();
+    });
+
+    const URL=ensureApiBaseUrl();
+    const cart=JSON.parse(localStorage.getItem("pendingCheckoutCart")||"[]");
+    const customer=JSON.parse(localStorage.getItem("pendingCustomer")||"null");
+    let paymentSessionId="";
+    let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
+    let pollTimer=null;
+    let isFinalizingPayment=false;
+    if(!localStorage.getItem("token"))window.location.replace(`index.html?t=${Date.now()}`);
+
+    function getToken(){return localStorage.getItem("token")||""}
+
+    function setMessage(text,type=""){message.className="message";message.textContent=text||"";if(!text){message.style.display="none";return}message.classList.add(type||"success");message.style.display="block"}
+    function authHeaders(extra={}){return{...extra,Authorization:"Bearer "+getToken()}}
+    async function fetchJson(path,options={}){const response=await fetch(URL+path,{...options,cache:"no-store",headers:authHeaders(options.headers||{})}),data=await response.json().catch(()=>({}));if(response.status===401){localStorage.clear();window.location.replace(`index.html?t=${Date.now()}`);throw new Error("Session expired")}if(!response.ok)throw new Error(data.message||"Request failed");return data}
+    const formatAmount=v=>"Rs "+Number(v||0).toFixed(2);
+    function setPaymentActionState(isBusy){
+      isFinalizingPayment=isBusy;
+      refreshBtn.disabled=isBusy;
+      confirmBtn.disabled=isBusy;
+      manualUpiBtn.disabled=isBusy;
+      confirmBtn.textContent=isBusy?"Processing...":paymentMethod==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
+      manualUpiBtn.textContent=isBusy?"Processing...":"Confirm UPI Received";
+    }
+
+    function renderOrder(){
+        if(!cart.length){
+          items.innerHTML='<p class="empty">No checkout items found. Go back to the app and add items to the cart first.</p>';
+          refreshBtn.disabled=true;confirmBtn.disabled=true;manualUpiBtn.disabled=true;
+          return;
+        }
+      let totalValue=0,units=0;
+      const discountPercent=Number(customer?.membershipDiscountPercent||0);
+      items.innerHTML=cart.map(item=>{
+        const lineTotal=Number(item.price)*Number(item.quantity);
+        totalValue+=lineTotal;units+=Number(item.quantity);
+        return `<div class="item"><div><strong>${item.name}</strong><div style="color:#64748b;margin-top:4px">${item.quantity} x ${formatAmount(item.price)}</div></div><strong>${formatAmount(lineTotal)}</strong></div>`;
+      }).join("");
+      itemCount.textContent=String(cart.length);
+      unitCount.textContent=String(units);
+      topItemCount.textContent=String(cart.length);
+      topUnitCount.textContent=String(units);
+      customerSummary.textContent=customer?.phone ? `${customer.name || "Customer"} (${customer.phone})` : "Walk-in";
+      memberSummary.textContent=customer?.isMember ? `Yes (${discountPercent}%)` : "No";
+      subtotal.textContent=formatAmount(totalValue);
+      discount.textContent=formatAmount(totalValue*(discountPercent/100));
+      const payable=formatAmount(Math.max(0,totalValue-(totalValue*(discountPercent/100))));
+      total.textContent=payable;
+      topTotal.textContent=payable;
+    }
+
+    function updateStatusBox(status,reference=""){
+      statusBox.className="status-box";
+      if(status==="PAID"||status==="BILLED")statusBox.classList.add("status-paid");
+      else if(status==="FAILED")statusBox.classList.add("status-failed");
+      else statusBox.classList.add("status-pending");
+      statusBox.textContent=`Payment status: ${status}${reference?` | Ref: ${reference}`:""}`;
+    }
+
+    function updateHelperText(){
+      helperText.textContent=paymentMethod==="manual-upi"
+        ? "For UPI, let the customer scan the QR and confirm after money is received."
+        : paymentMethod==="cash"
+          ? "Cash billing will complete after you confirm that money has been collected."
+          : "Use this when a delivery order is paid on handover, then confirm to create the bill.";
+    }
+
+    function setMethod(method){
+      paymentMethod=method;
+      localStorage.setItem("paymentMethod",paymentMethod);
+      ["manual-upi","cash","cash-on-delivery"].forEach(value=>{
+        document.getElementById(`method-${value==="manual-upi"?"upi":value==="cash"?"cash":"cod"}`).classList.toggle("active",value===method);
+        });
+        upiPanel.style.display=method==="manual-upi"?"grid":"none";
+        manualUpiBtn.style.display=method==="manual-upi"?"inline-block":"none";
+        refreshBtn.style.display=method==="manual-upi"?"inline-block":"none";
+        confirmBtn.textContent=method==="manual-upi"?"Confirm After UPI Receipt":"Confirm Payment Received";
+        updateHelperText();
+      }
+
+    async function createPaymentSession(forceNew=false){
+      if(!cart.length)return;
+      if(forceNew){
+        paymentSessionId="";
+        localStorage.removeItem("paymentSessionId");
+      }
+      if(paymentSessionId)return;
+      const data=await fetchJson("/payments/session",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({items:cart,provider:paymentMethod,customer:customer||{}})
+      });
+      paymentSessionId=data.sessionId;
+      localStorage.setItem("paymentSessionId",paymentSessionId);
+      sessionBox.textContent=`Reference: ${paymentSessionId}`;
+      updateStatusBox(data.status);
+    }
+
+    async function generateBill(){
+      const wasAlreadyBusy=isFinalizingPayment;
+      if(!wasAlreadyBusy)setPaymentActionState(true);
+      try{
+        const data=await fetchJson("/bills",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({paymentSessionId})
+        });
+      localStorage.removeItem("pendingCheckoutCart");
+      localStorage.removeItem("pendingCustomer");
+      localStorage.removeItem("pharmacyCart");
+      localStorage.removeItem("paymentSessionId");
+        localStorage.removeItem("paymentMethod");
+        setMessage("Payment confirmed. Bill created for "+formatAmount(data.totalAmount)+".","success");
+        updateStatusBox("BILLED");
+        clearInterval(pollTimer);
+        setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1400);
+      }catch(error){setMessage(error.message,"error");if(!wasAlreadyBusy)setPaymentActionState(false);}
+      }
+
+    async function checkPaymentStatus(){
+      if(isFinalizingPayment)return;
+      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
+      if(paymentMethod!=="manual-upi"){setMessage("Use the confirm button for cash or cash on delivery.","error");return;}
+      try{
+        const data=await fetchJson(`/payments/session/${paymentSessionId}`);
+        const session=data.session;
+        paymentMethod=session.provider||paymentMethod;
+        sessionBox.textContent=`Reference: ${session.id} | Method: ${paymentMethod}`;
+        updateStatusBox(session.status,session.paymentReference);
+        if(session.status==="PAID"){
+          await generateBill();
+        }else if(session.status==="BILLED"){
+          localStorage.removeItem("pendingCheckoutCart");
+          localStorage.removeItem("pharmacyCart");
+          localStorage.removeItem("paymentSessionId");
+          localStorage.removeItem("paymentMethod");
+          localStorage.removeItem("pendingCustomer");
+          setMessage("Bill was already created for this payment.","success");
+          setTimeout(()=>{window.location.replace(`app.html?v=${Date.now()}`)},1200);
+        }else{
+          setMessage("UPI payment is still pending. Confirm only after the payment arrives.","error");
+        }
+      }catch(error){setMessage(error.message,"error");}
+    }
+
+    async function confirmManualUpiReceipt(){
+      if(isFinalizingPayment)return;
+      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
+      try{
+        setPaymentActionState(true);
+        await fetchJson(`/payments/session/${paymentSessionId}/manual-confirm`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({paymentReference:`UPI-${Date.now()}`})
+        });
+        await generateBill();
+      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+    }
+
+    async function confirmCurrentMethod(){
+      if(isFinalizingPayment)return;
+      if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
+      if(paymentMethod==="manual-upi"){
+        await confirmManualUpiReceipt();
+        return;
+      }
+      try{
+        setPaymentActionState(true);
+        await fetchJson(`/payments/session/${paymentSessionId}/cash-received`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({provider:paymentMethod,paymentReference:`${paymentMethod.toUpperCase()}-${Date.now()}`})
+        });
+        await generateBill();
+      }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+    }
+
+    function startPolling(){
+      clearInterval(pollTimer);
+      pollTimer=setInterval(()=>{
+        if(paymentSessionId&&paymentMethod==="manual-upi"){
+          checkPaymentStatus().catch(()=>{});
+        }
+      },7000);
+    }
+
+    function backToApp(){window.location.replace(`app.html?v=${Date.now()}`)}
+
+    (async function init(){
+      renderOrder();
+      setMethod(paymentMethod);
+      if(!cart.length)return;
+      try{
+        await createPaymentSession(true);
+        startPolling();
+      }catch(error){
+        setMessage(error.message,"error");
+      }
+    })();
+  </script>
+  <script src="pwa.js"></script>
+</body>
+</html>

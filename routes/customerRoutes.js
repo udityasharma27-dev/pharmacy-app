@@ -3,6 +3,7 @@ const router = express.Router();
 const Customer = require("../models/Customer");
 const { requireAuth } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
+const { normalizeOrderSource, normalizeCustomerAppStatus } = require("../services/commerceMode");
 
 function normalizePhone(phone) {
   return String(phone || "").replace(/\D/g, "").trim();
@@ -42,6 +43,10 @@ router.post("/", async (req, res) => {
     const membership = Boolean(req.body.membership ?? req.body.isMember);
     const visit_count = Math.max(0, Number(req.body.visit_count || 0) || 0);
     const last_purchase_date = req.body.last_purchase_date ? new Date(req.body.last_purchase_date) : null;
+    const acquisitionSource = normalizeOrderSource(req.body.acquisitionSource);
+    const lastOrderSource = req.body.lastOrderSource ? normalizeOrderSource(req.body.lastOrderSource) : "";
+    const appStatus = normalizeCustomerAppStatus(req.body.appStatus);
+    const linkedUserId = String(req.body.linkedUserId || "").trim();
 
     if (!phone || phone.length < 10) {
       return res.status(400).json({ success: false, message: "Enter a valid phone number" });
@@ -66,7 +71,11 @@ router.post("/", async (req, res) => {
         membership,
         visit_count,
         last_purchase_date,
-        membershipDiscountPercent
+        membershipDiscountPercent,
+        linkedUserId,
+        appStatus,
+        acquisitionSource,
+        lastOrderSource
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
@@ -75,7 +84,10 @@ router.post("/", async (req, res) => {
       phone: customer.phone,
       membership: customer.membership,
       visit_count: customer.visit_count,
-      membershipDiscountPercent: customer.membershipDiscountPercent
+      membershipDiscountPercent: customer.membershipDiscountPercent,
+      appStatus: customer.appStatus,
+      acquisitionSource: customer.acquisitionSource,
+      lastOrderSource: customer.lastOrderSource
     });
 
     res.json({ success: true, customer });

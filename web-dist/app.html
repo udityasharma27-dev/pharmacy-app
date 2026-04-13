@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Lumière de Vie Pharma</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Counter Workspace</div>
+        <h1>Lumière de Vie Pharma</h1>
+        <p>Run a premium pharmacy workspace with elegant counter billing, batch-aware stock intelligence, staff performance insight, and a calmer daily flow.</p>
+      </div>
+      <div class="hero-actions">
+        <div class="pill">Role <strong id="roleLabel">Loading...</strong></div>
+        <div class="pill">Store <strong id="activeStoreLabel">All Stores</strong></div>
+        <div class="pill clickable-pill" onclick="toggleCart()">Cart <strong id="cartCount">0</strong></div>
+        <button class="btn btn-secondary" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="today-strip">
+      <div class="today-card accent-danger">
+        <p>Needs Restock</p>
+        <h3 id="restockNowCount">0</h3>
+        <span>low stock brands</span>
+      </div>
+      <div class="today-card accent-warning">
+        <p>Expiring Soon</p>
+        <h3 id="expirySoonCount">0</h3>
+        <span>within 30 days</span>
+      </div>
+      <div class="today-card accent-info">
+        <p>Bills Today</p>
+        <h3 id="billsTodayCount">0</h3>
+        <span>counter completed</span>
+      </div>
+      <div class="today-card accent-success">
+        <p>Today Revenue</p>
+        <h3 id="todayRevenueTotal">Rs 0.00</h3>
+        <span>from billed orders</span>
+      </div>
+    </div>
+
+    <div class="quickbar">
+      <div class="quickbar-copy">
+        <h2>Quick actions</h2>
+        <p>Jump straight to the task pharmacists do most often.</p>
+      </div>
+      <div class="quick-actions" id="storeSwitcherWrap">
+        <select id="storeSwitcher" onchange="changeActiveStore()"></select>
+      </div>
+      <div class="quick-actions">
+        <button class="btn btn-primary" onclick="focusBillingSearch()">New Bill</button>
+        <button class="btn btn-soft" onclick="focusBarcodeSearch()">Scan Barcode</button>
+        <button class="btn btn-soft" id="addStockQuickAction" onclick="scrollToOwnerPanel()">Add Stock</button>
+        <button class="btn btn-soft" onclick="focusAlertPanel()">Review Alerts</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><p>Total Medicines</p><h3 id="totalMedicineCount">0</h3></div>
+      <div class="stat-card"><p>Total Brands</p><h3 id="totalBrandCount">0</h3></div>
+      <div class="stat-card"><p>Alerts</p><h3 id="lowStockCount">0</h3></div>
+      <div class="stat-card"><p>Total Revenue</p><h3 id="revenueTotal">Rs 0.00</h3></div>
+      <div class="stat-card"><p>Total Profit</p><h3 id="profitTotal">Rs 0.00</h3></div>
+    </div>
+
+    <div class="layout">
+      <div class="stack">
+        <div class="panel owner-only" id="ownerPanel" hidden>
+          <h2 class="section-title">Inventory Editor</h2>
+          <p class="section-subtitle">Use the compact form below to add stock faster without missing batch or expiry details.</p>
+          <div class="editor-layout">
+            <div class="editor-section">
+              <div class="section-chip">Basic Info</div>
+              <div class="grid-3">
+                <div class="field"><label for="categoryInput">Category</label><input id="categoryInput" placeholder="Pain & Fever medicines"></div>
+                <div class="field"><label for="saltInput">Salt</label><input id="saltInput" placeholder="Paracetamol"></div>
+                <div class="field"><label for="brandInput">Brand</label><input id="brandInput" placeholder="Dolo 650"></div>
+                <div class="field"><label for="brandTypeInput">Brand Type</label><select id="brandTypeInput"><option value="Branded">Branded</option><option value="Generic">Generic</option></select></div>
+                <div class="field">
+                  <label for="supplierInput">Supplier</label>
+                  <input id="supplierInput" placeholder="Distributor name">
+                  <div class="field-note" id="lastSupplierHint">Last supplier: none yet</div>
+                </div>
+                <div class="field">
+                  <label for="qtyInput">Quantity</label>
+                  <input id="qtyInput" type="number" min="0" step="1">
+                  <div class="field-note">Use packs or units consistently.</div>
+                </div>
+              </div>
+            </div>
+            <div class="editor-section">
+              <div class="section-chip">Batch & Pricing</div>
+              <div class="grid-3">
+                <div class="field"><label for="priceInput">Selling Price</label><input id="priceInput" type="number" min="0" step="0.01"></div>
+                <div class="field"><label for="costPriceInput">Cost Price</label><input id="costPriceInput" type="number" min="0" step="0.01"></div>
+                <div class="field">
+                  <label for="barcodeInput">Barcode</label>
+                  <input id="barcodeInput" placeholder="Scan or type barcode">
+                </div>
+                <div class="field"><label for="batchInput">Batch Number</label><input id="batchInput" placeholder="Batch or lot code"></div>
+                <div class="field"><label for="expiryInput">Expiry Date</label><input id="expiryInput" type="date"></div>
+                <div class="field">
+                  <label>Helper</label>
+                  <div class="helper-tile" id="lastCategoryHint">Last category: none yet</div>
+                </div>
+              </div>
+            </div>
+            <div class="actions-row">
+             <button class="btn btn-primary" id="addMedicineBtn" onclick="addMedicine()">Add Medicine</button>
+             <button class="btn btn-soft" id="addMedicineKeepOpenBtn" onclick="addMedicine(true)">Save & Add Another</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Inventory</h2>
+          <p class="section-subtitle">Search by salt, brand, supplier, or batch and manage stock professionally.</p>
+          <div class="toolbar">
+            <input id="searchInput" placeholder="Search salt, brand, supplier, batch" oninput="renderAll()">
+            <select id="stockFilter" onchange="renderAll()">
+              <option value="all">All stock levels</option>
+              <option value="low">Low stock</option>
+              <option value="expired">Expired / near expiry</option>
+              <option value="healthy">Healthy stock</option>
+            </select>
+            <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+          </div>
+          <div id="inventoryList" class="inventory-list"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Top Selling Medicines</h2>
+          <p class="section-subtitle">Quickly see the strongest movers for the selected store.</p>
+          <div id="topSellingList" class="supplier-list"></div>
+        </div>
+
+        <div class="panel owner-only" id="storePanel" hidden>
+          <h2 class="section-title">Store Directory</h2>
+          <p class="section-subtitle">Add branches and keep separate inventory for each location.</p>
+          <div class="grid-3">
+            <div class="field"><label for="storeNameInput">Store Name</label><input id="storeNameInput" placeholder="Lumiere Central"></div>
+            <div class="field"><label for="storeCodeInput">Store Code</label><input id="storeCodeInput" placeholder="CTR-01"></div>
+            <div class="field"><label for="storePhoneInput">Store Phone</label><input id="storePhoneInput" placeholder="Contact number"></div>
+          </div>
+          <div class="field" style="margin-top:12px;"><label for="storeAddressInput">Address</label><input id="storeAddressInput" placeholder="Store address"></div>
+            <div class="actions-row" style="margin-top:14px;">
+              <button class="btn btn-primary" id="createStoreBtn" onclick="createStore()">Add Store</button>
+            </div>
+          <div id="storeList" class="supplier-list" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="panel owner-only" id="transferPanel" hidden>
+          <h2 class="section-title">Branch Stock Transfer</h2>
+          <p class="section-subtitle">Move inventory between branches with a clean audit trail and transfer history.</p>
+          <div class="grid-3">
+            <div class="field"><label for="transferFromStore">From Store</label><select id="transferFromStore" onchange="handleTransferSourceChange()"></select></div>
+            <div class="field"><label for="transferToStore">To Store</label><select id="transferToStore"></select></div>
+            <div class="field"><label for="transferQuantity">Quantity</label><input id="transferQuantity" type="number" min="1" step="1" value="1"></div>
+          </div>
+          <div class="grid-3" style="margin-top:14px;">
+            <div class="field"><label for="transferMedicine">Medicine</label><select id="transferMedicine" onchange="loadTransferBrands()"></select></div>
+            <div class="field"><label for="transferBrand">Brand</label><select id="transferBrand"></select></div>
+            <div class="field"><label for="transferNote">Transfer Note</label><input id="transferNote" placeholder="Optional note for head office"></div>
+          </div>
+          <div id="transferStockHint" class="status-line" style="margin-top:14px;">Choose a source store to load available stock for transfer.</div>
+          <div class="actions-row" style="margin-top:14px;">
+            <button class="btn btn-primary" id="transferStockBtn" onclick="submitStockTransfer()">Transfer Stock</button>
+          </div>
+          <div class="subpanel">
+            <div class="subpanel-head">
+              <h3>Recent Transfers</h3>
+              <button class="mini-link" onclick="renderTransferHistory()">Refresh</button>
+            </div>
+            <div id="transferHistory" class="supplier-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <h2 class="section-title">Billing Desk</h2>
+          <p class="section-subtitle">Search by medicine, brand, or barcode, then add quickly with quantity shortcuts and recent picks.</p>
+          <div class="grid-3" style="margin-bottom:16px;">
+            <div class="field"><label for="customerPhone">Customer Phone</label><input id="customerPhone" placeholder="10 digit phone"></div>
+            <div class="field"><label for="customerName">Customer Name</label><input id="customerName" placeholder="Optional name"></div>
+            <div class="field"><label for="memberDiscount">Member Discount %</label><input id="memberDiscount" type="number" min="0" max="100" step="1" value="0"></div>
+          </div>
+            <div class="actions-row" style="margin-bottom:16px;">
+              <button class="btn btn-secondary" id="lookupCustomerBtn" onclick="lookupCustomer()">Check Membership</button>
+              <button class="btn btn-soft" id="saveMemberBtn" onclick="saveMember()">Save As Member</button>
+            </div>
+          <div id="membershipStatus" class="status-line" style="margin-bottom:16px;">No customer selected.</div>
+          <div class="finder-grid">
+            <div class="field finder-field">
+              <label for="billingSearch">Smart Search</label>
+              <input id="billingSearch" placeholder="Search salt or brand name" oninput="renderBillingFinder()">
+            </div>
+            <div class="field finder-field">
+              <label for="barcodeSearch">Barcode</label>
+              <input id="barcodeSearch" placeholder="Scan barcode to select medicine" oninput="handleBarcodeSearch(false)">
+            </div>
+          </div>
+          <div id="billingSuggestionBox" class="suggestion-list"></div>
+          <div id="selectedMedicineCard" class="selected-card">
+            <strong>No medicine selected.</strong>
+            <div class="meta">Choose a search result, frequent medicine, or barcode match.</div>
+          </div>
+          <div class="chip-row" id="quickQtyRow">
+            <button class="chip-btn active" onclick="setQuickQuantity(1)">1</button>
+            <button class="chip-btn" onclick="setQuickQuantity(2)">2</button>
+            <button class="chip-btn" onclick="setQuickQuantity(5)">5</button>
+            <button class="chip-btn" onclick="setQuickQuantity(10)">10</button>
+          </div>
+          <div class="grid-3">
+            <div class="field"><label for="billSalt">Salt</label><select id="billSalt" onchange="loadBillBrands()"></select></div>
+            <div class="field"><label for="billBrand">Brand</label><select id="billBrand"></select></div>
+            <div class="field"><label for="billQty">Quantity</label><input id="billQty" type="number" min="1" step="1" placeholder="1"></div>
+          </div>
+          <div class="actions-row">
+            <button class="btn btn-primary" onclick="addToCart()">Add To Cart</button>
+          </div>
+          <div class="subpanel">
+            <div class="subpanel-head">
+              <h3>Frequent & Recent</h3>
+              <button class="mini-link" onclick="renderRecentItems()">Refresh</button>
+            </div>
+            <div id="recentItems" class="suggestion-list compact"></div>
+          </div>
+        </div>
+
+        <div class="panel" id="alertSection">
+          <h2 class="section-title">Alerts</h2>
+          <p class="section-subtitle">Low stock and expiry alerts now include direct actions so nothing gets missed.</p>
+          <div id="alertPanel" class="alert-list"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Profile & Team</h2>
+          <p class="section-subtitle">Track attendance, salary credits, monthly patient bonus targets, and owner-managed staff accounts.</p>
+          <div id="currentProfileCard" class="profile-card"></div>
+
+          <div class="subpanel owner-only" id="staffCreatePanel" hidden>
+            <div class="subpanel-head">
+              <h3>Create Staff Account</h3>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="staffUsername">Username</label><input id="staffUsername" placeholder="staff_rahul"></div>
+              <div class="field"><label for="staffPassword">Password</label><input id="staffPassword" type="password" placeholder="Set password"></div>
+              <div class="field"><label for="staffFullName">Full Name</label><input id="staffFullName" placeholder="Rahul Sharma"></div>
+              <div class="field"><label for="staffPhone">Phone</label><input id="staffPhone" placeholder="10 digit phone"></div>
+              <div class="field"><label for="staffJobTitle">Job Title</label><input id="staffJobTitle" placeholder="Counter Staff"></div>
+              <div class="field"><label for="staffStore">Store</label><select id="staffStore"></select></div>
+              <div class="field"><label for="staffBaseSalary">Base Salary</label><input id="staffBaseSalary" type="number" min="0" step="0.01" placeholder="15000"></div>
+              <div class="field"><label for="staffThreshold">Monthly Patient Threshold</label><input id="staffThreshold" type="number" min="0" step="1" placeholder="50"></div>
+              <div class="field"><label for="staffBonus">Bonus Per Extra Patient</label><input id="staffBonus" type="number" min="0" step="0.01" placeholder="100"></div>
+              <div class="field"><label for="staffRole">Role</label><select id="staffRole"><option value="worker">Worker</option><option value="owner">Owner</option></select></div>
+            </div>
+              <div class="actions-row" style="margin-top:14px;">
+                <button class="btn btn-primary" id="createStaffBtn" onclick="createStaffAccount()">Create Account</button>
+              </div>
+          </div>
+
+          <div class="subpanel">
+            <div class="subpanel-head">
+              <h3>Staff Profiles</h3>
+            </div>
+            <div id="teamProfileList" class="team-list"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Suppliers</h2>
+          <p class="section-subtitle">Supplier summary generated from your inventory.</p>
+          <div id="supplierPanel" class="supplier-list"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Bill History</h2>
+          <p class="section-subtitle">Track revenue, profit, and print invoice copies.</p>
+          <div id="billHistory" class="history-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cartBox" class="cart-box"></div>
+  <div id="cartDock" class="cart-dock"></div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 class="section-title">Edit Medicine</h2>
+          <p class="section-subtitle">Update details or adjust stock quickly.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Close</button>
+      </div>
+
+      <div class="grid-3">
+        <div class="field"><label for="editCategoryInput">Category</label><input id="editCategoryInput"></div>
+        <div class="field"><label for="editSaltInput">Salt</label><input id="editSaltInput"></div>
+        <div class="field"><label for="editBrandInput">Brand</label><input id="editBrandInput"></div>
+        <div class="field"><label for="editBrandTypeInput">Brand Type</label><select id="editBrandTypeInput"><option value="Branded">Branded</option><option value="Generic">Generic</option></select></div>
+        <div class="field"><label for="editSupplierInput">Supplier</label><input id="editSupplierInput"></div>
+        <div class="field"><label for="editPriceInput">Selling Price</label><input id="editPriceInput" type="number" min="0" step="0.01"></div>
+        <div class="field"><label for="editCostPriceInput">Cost Price</label><input id="editCostPriceInput" type="number" min="0" step="0.01"></div>
+        <div class="field"><label for="editQtyInput">Quantity</label><input id="editQtyInput" type="number" min="0" step="1"></div>
+        <div class="field"><label for="editBarcodeInput">Barcode</label><input id="editBarcodeInput"></div>
+        <div class="field"><label for="editBatchInput">Batch Number</label><input id="editBatchInput"></div>
+        <div class="field"><label for="editExpiryInput">Expiry Date</label><input id="editExpiryInput" type="date"></div>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+        <button class="btn btn-soft" onclick="applyQuickStock(10)">+10 Stock</button>
+        <button class="btn btn-soft" onclick="applyQuickStock(-10)">-10 Stock</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="api-base.js"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

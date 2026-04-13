@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Lumière de Vie Pharma Login</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root {
+      --bg: #f5eee5;
+      --card: rgba(255, 251, 246, 0.92);
+      --text: #231815;
+      --muted: #74655f;
+      --primary: #9d6b3f;
+      --primary-dark: #7e512b;
+      --danger: #a53d4b;
+      --shadow: 0 28px 75px rgba(68, 42, 24, 0.16);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(157, 107, 63, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(47, 111, 115, 0.14), transparent 26%),
+        linear-gradient(180deg, #fbf6ef 0%, var(--bg) 48%, #fffdfa 100%);
+      padding: 18px;
+    }
+    .shell {
+      width: min(1080px, 100%);
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr;
+      background: var(--card);
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .promo {
+      padding: 42px;
+      color: white;
+      background: linear-gradient(135deg, #261611 0%, #6d4a31 56%, #2f6f73 100%);
+      display: grid;
+      align-content: space-between;
+      min-height: 620px;
+    }
+    .promo h1 { margin: 0; font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+    .promo p { color: rgba(255, 255, 255, 0.82); font-size: 15px; max-width: 420px; }
+    .feature-list { display: grid; gap: 14px; }
+    .feature {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .feature strong { display: block; margin-bottom: 4px; }
+    .form-wrap {
+      padding: 42px 34px;
+      background: rgba(255, 255, 255, 0.86);
+      display: grid;
+      align-content: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f8eee4;
+      color: #7e512b;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .form-wrap h2 { margin: 0 0 8px; font-size: 32px; }
+    .sub { margin: 0 0 22px; color: var(--muted); }
+    .field { display: grid; gap: 8px; margin-bottom: 16px; }
+    .field label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .field small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      font-size: 15px;
+      outline: none;
+      background: rgba(255, 255, 255, 0.96);
+    }
+    input:focus {
+      border-color: rgba(157, 107, 63, 0.56);
+      box-shadow: 0 0 0 4px rgba(157, 107, 63, 0.1);
+    }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      background: var(--primary);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+    button:hover { transform: translateY(-1px); background: var(--primary-dark); }
+    .message { min-height: 24px; margin-top: 14px; font-weight: 700; color: var(--danger); }
+    .helper {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fcf7f1;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .helper strong { color: var(--text); }
+    .install {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-start;
+    }
+    .install button {
+      width: auto;
+      background: #f8eee4;
+      color: #7e512b;
+    }
+    @media (max-width: 920px) {
+      .shell { grid-template-columns: 1fr; }
+      .promo { min-height: auto; padding: 30px; }
+      .form-wrap { padding: 30px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="promo">
+      <div>
+        <h1>Lumière de Vie Pharma</h1>
+        <p>Bring a refined, modern pharmacy experience to the counter with premium inventory control, guided billing, patient loyalty, and staff performance visibility.</p>
+      </div>
+
+      <div class="feature-list">
+        <div class="feature">
+          <strong>Curated Inventory</strong>
+          Search medicines, manage stock, track batches, and keep shelves beautifully organized.
+        </div>
+        <div class="feature">
+          <strong>Elegant Billing</strong>
+          Create invoices quickly, review history, and serve patients with a smoother checkout flow.
+        </div>
+        <div class="feature">
+          <strong>Operational Insight</strong>
+          Monitor suppliers, expiry dates, staff performance, and daily profit from one refined workspace.
+        </div>
+      </div>
+    </section>
+
+    <section class="form-wrap">
+      <div class="eyebrow">Secure Sign In</div>
+      <h2>Welcome back</h2>
+      <p class="sub">Use your pharmacy account to open the dashboard.</p>
+
+      <div class="field">
+        <label for="user">Username</label>
+        <input id="user" placeholder="Enter username">
+      </div>
+
+      <div class="field">
+        <label for="pass">Password</label>
+        <input id="pass" type="password" placeholder="Enter password">
+      </div>
+
+      <button id="loginBtn" onclick="login()">Login To Dashboard</button>
+      <p id="message" class="message"></p>
+      <div class="install">
+        <button type="button" data-install-app hidden onclick="installPharmacyApp()">Install On Phone</button>
+      </div>
+
+    </section>
+  </div>
+
+  <script src="api-base.js"></script>
+  <script>
+    const URL = getApiBaseUrl();
+    const isWebOrigin = window.location.protocol === "http:" || window.location.protocol === "https:";
+    let isLoggingIn = false;
+
+    function setLoginBusy(isBusy) {
+      isLoggingIn = isBusy;
+      const button = document.getElementById("loginBtn");
+      if (!button) return;
+      button.disabled = isBusy;
+      button.textContent = isBusy ? "Signing In..." : "Login To Dashboard";
+    }
+
+    async function login() {
+      if (isLoggingIn) return;
+      const username = document.getElementById("user").value.trim();
+      const password = document.getElementById("pass").value;
+      const apiBase = getApiBaseUrl();
+      const message = document.getElementById("message");
+
+      message.innerText = "";
+
+      if (!apiBase) {
+        message.innerText = "Server configuration is missing.";
+        return;
+      }
+
+      if (!username || !password) {
+        message.innerText = "Enter both username and password.";
+        return;
+      }
+
+      try {
+        setLoginBusy(true);
+        const res = await fetch(apiBase + "/users/login", {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          message.innerText = data.message || "Login failed.";
+          return;
+        }
+
+        localStorage.clear();
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+        window.location.replace(`app.html?v=${Date.now()}`);
+      } catch (error) {
+        message.innerText = isWebOrigin
+          ? "Server is not reachable. Start the backend and open the app from that same server address."
+          : "Server is not reachable. Check that the live backend is running.";
+      } finally {
+        setLoginBusy(false);
+      }
+    }
+  </script>
+  <script src="pwa.js"></script>
+</body>
+</html>

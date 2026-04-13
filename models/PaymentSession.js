@@ -87,6 +87,16 @@ const paymentSessionSchema = new mongoose.Schema({
     type: String,
     default: "manual-upi"
   },
+  source: {
+    type: String,
+    enum: ["in_store", "online"],
+    default: "in_store"
+  },
+  customerContext: {
+    type: String,
+    enum: ["staff_controlled", "self_service"],
+    default: "staff_controlled"
+  },
   paymentReference: {
     type: String,
     default: ""

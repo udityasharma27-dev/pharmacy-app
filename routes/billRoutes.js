@@ -7,6 +7,7 @@ const Bill = require("../models/Bill");
 const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
+const { normalizeOrderSource, normalizeCustomerContext } = require("../services/commerceMode");
 
 router.use(requireAuth);
 
@@ -161,6 +162,8 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
 
   const bill = new Bill({
     items: billItems,
+    source: normalizeOrderSource(paymentSession.source),
+    customerContext: normalizeCustomerContext(paymentSession.customerContext),
     customer: {
       ...(paymentSession.customer || {}),
       membership: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
@@ -211,11 +214,14 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
         name: String(paymentSession.customer?.name || "").trim(),
         isMember: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
         membership: Boolean(paymentSession.customer?.membership ?? paymentSession.customer?.isMember),
-        last_purchase_date: bill.createdAt
+        last_purchase_date: bill.createdAt,
+        lastOrderSource: bill.source
       },
       $setOnInsert: {
         phone: customerPhone,
         membershipDiscountPercent: 0,
+        acquisitionSource: bill.source,
+        appStatus: "store_only",
         notes: ""
       }
     };
@@ -237,7 +243,9 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
       totalAmount: total,
       totalProfit,
       billId: bill._id,
-      invoiceNumber: bill.invoiceNumber
+      invoiceNumber: bill.invoiceNumber,
+      source: bill.source,
+      customerContext: bill.customerContext
     },
     audit: {
       entityId: bill._id,
@@ -246,7 +254,9 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
       totalProfit: bill.totalProfit,
       storeId: bill.store?.storeId || "",
       storeName: bill.store?.storeName || "",
-      itemCount: bill.items.length
+      itemCount: bill.items.length,
+      source: bill.source,
+      customerContext: bill.customerContext
     }
   };
 }
@@ -353,7 +363,9 @@ router.post("/", async (req, res) => {
         totalProfit: result.audit.totalProfit,
         storeId: result.audit.storeId,
         storeName: result.audit.storeName,
-        itemCount: result.audit.itemCount
+        itemCount: result.audit.itemCount,
+        source: result.audit.source,
+        customerContext: result.audit.customerContext
       });
     }
 

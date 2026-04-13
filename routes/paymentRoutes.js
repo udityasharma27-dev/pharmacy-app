@@ -1,39 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const Customer = require("../models/Customer");
-const Medicine = require("../models/Medicine");
 const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
-const {
-  buildCustomerSnapshot,
-  buildDiscountLine,
-  summarizeDiscountLines
-} = require("../services/discountService");
-const { getOfferConfig } = require("../services/offerConfigService");
-const { evaluateOfferRules } = require("../services/offersEngine");
-const { normalizeOrderSource, normalizeCustomerContext } = require("../services/commerceMode");
+const { buildCheckoutPayload } = require("../services/checkoutPricing");
 
 function isManualUpiConfirmationAllowed() {
   return String(process.env.ALLOW_MANUAL_UPI_CONFIRM || "true").trim().toLowerCase() !== "false";
-}
-
-function normalizePhone(phone) {
-  return String(phone || "").replace(/\D/g, "").trim();
-}
-
-function getFallbackOfferConfig() {
-  return {
-    mondayMemberOffer: {
-      enabled: true,
-      extraDiscountPercent: 3
-    },
-    globalOffer: {
-      enabled: false,
-      discountPercent: 0,
-      label: "Global Offer"
-    }
-  };
 }
 
 router.use(requireAuth);
@@ -47,136 +20,11 @@ router.post("/session", async (req, res) => {
       });
     }
 
-    const items = Array.isArray(req.body.items) ? req.body.items : [];
-    const provider = String(req.body.provider || "manual-upi").trim() || "manual-upi";
-    const source = normalizeOrderSource(req.body.source);
-    const customerContext = normalizeCustomerContext(req.body.customerContext);
-    const requestedCustomer = req.body.customer || {};
-    const fallbackCustomer = req.user.role === "customer"
-      ? {
-        phone: req.user.phone || "",
-        name: req.user.fullName || ""
-      }
-      : {};
-    const store = {
-      storeId: String(req.body.store?.storeId || req.user.storeId || "").trim(),
-      storeName: String(req.body.store?.storeName || req.user.storeName || "").trim()
-    };
-
-    if (!items.length) {
-      return res.status(400).json({ success: false, message: "Cart is empty" });
-    }
-
-    const effectiveCustomer = { ...fallbackCustomer, ...requestedCustomer };
-    const normalizedPhone = normalizePhone(effectiveCustomer.phone);
-    let customerRecord = null;
-
-    if (normalizedPhone) {
-      try {
-        customerRecord = await Customer.findOne({ phone: normalizedPhone }).lean();
-      } catch (error) {
-        console.warn("Customer lookup failed during payment session creation", {
-          message: error?.message,
-          phone: normalizedPhone
-        });
-      }
-    }
-
-    const customer = buildCustomerSnapshot(customerRecord, effectiveCustomer);
-    let offerConfig = getFallbackOfferConfig();
-
-    try {
-      offerConfig = await getOfferConfig();
-    } catch (error) {
-      console.warn("Offer config lookup failed during payment session creation", {
-        message: error?.message
-      });
-    }
-
-    const mergedItems = new Map();
-    const normalizedItems = [];
-
-    for (const item of items) {
-      const quantity = Number(item.quantity);
-
-      if (!item.medId || !item.brandId || !Number.isInteger(quantity) || quantity <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Each cart item must include a medicine, brand, and positive quantity"
-        });
-      }
-
-      const key = `${item.medId}:${item.brandId}`;
-      mergedItems.set(key, {
-        medId: item.medId,
-        brandId: item.brandId,
-        quantity: (mergedItems.get(key)?.quantity || 0) + quantity
-      });
-    }
-
-    for (const item of mergedItems.values()) {
-      const medicine = await Medicine.findById(item.medId);
-
-      if (!medicine) {
-        return res.status(404).json({ success: false, message: "Medicine not found" });
-      }
-
-      const brand = medicine.brands.id(item.brandId);
-
-      if (!brand) {
-        return res.status(404).json({ success: false, message: "Brand not found" });
-      }
-
-      if (Number(brand.quantity || 0) < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Not enough stock for ${brand.name}`
-        });
-      }
-
-      const line = buildDiscountLine({
-        medicine,
-        brand,
-        quantity: item.quantity,
-        customer
-      });
-      const offerEvaluation = evaluateOfferRules({
-        customer,
-        baseDiscountPercent: line.baseDiscountPercent,
-        offerConfig
-      });
-
-      line.discountPercent = offerEvaluation.finalDiscountPercent;
-      line.extraDiscountPercent = offerEvaluation.extraDiscountPercent;
-      line.appliedOffers = offerEvaluation.appliedOffers;
-      line.discountAmount = Number((line.lineSubtotal * (line.discountPercent / 100)).toFixed(2));
-      line.total = Number(Math.max(0, line.lineSubtotal - line.discountAmount).toFixed(2));
-      line.profit = Number((line.total - (line.costPrice * line.quantity)).toFixed(2));
-
-      normalizedItems.push(line);
-    }
-
-    const totals = summarizeDiscountLines(normalizedItems);
+    const payload = await buildCheckoutPayload(req);
 
     const session = await PaymentSession.create({
       userId: req.user.id,
-      store,
-      items: normalizedItems,
-      source,
-      customerContext,
-      customer: {
-        phone: customer.phone,
-        name: customer.name,
-        isMember: customer.membership,
-        membership: customer.membership,
-        membershipDiscountPercent: 0,
-        visit_count: customer.visit_count,
-        last_purchase_date: customer.last_purchase_date
-      },
-      subtotalAmount: totals.subtotalAmount,
-      discountAmount: totals.discountAmount,
-      totalAmount: totals.totalAmount,
-      provider
+      ...payload
     });
 
     res.json({

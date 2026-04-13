@@ -127,6 +127,7 @@
     const cart=JSON.parse(localStorage.getItem("pendingCheckoutCart")||"[]");
     const customer=JSON.parse(localStorage.getItem("pendingCustomer")||"null");
     let paymentSessionId="";
+    let directBillingMode=false;
     let paymentMethod=localStorage.getItem("paymentMethod")||"manual-upi";
     let pollTimer=null;
     let isFinalizingPayment=false;
@@ -181,6 +182,11 @@
       statusBox.textContent=`Payment status: ${status}${reference?` | Ref: ${reference}`:""}`;
     }
 
+    function getDirectPaymentReference(){
+      const prefix=paymentMethod==="manual-upi"?"UPI":paymentMethod.toUpperCase();
+      return `${prefix}-${Date.now()}`;
+    }
+
     function updateHelperText(){
       helperText.textContent=paymentMethod==="manual-upi"
         ? "For UPI, let the customer scan the QR and confirm after money is received."
@@ -206,28 +212,47 @@
       if(!cart.length)return;
       if(forceNew){
         paymentSessionId="";
+        directBillingMode=false;
         localStorage.removeItem("paymentSessionId");
       }
       if(paymentSessionId)return;
-      const data=await fetchJson("/payments/session",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({items:cart,provider:paymentMethod,customer:customer||{}})
-      });
-      paymentSessionId=data.sessionId;
-      localStorage.setItem("paymentSessionId",paymentSessionId);
-      sessionBox.textContent=`Reference: ${paymentSessionId}`;
-      updateStatusBox(data.status);
+      try{
+        const data=await fetchJson("/payments/session",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({items:cart,provider:paymentMethod,customer:customer||{}})
+        });
+        paymentSessionId=data.sessionId;
+        directBillingMode=false;
+        localStorage.setItem("paymentSessionId",paymentSessionId);
+        sessionBox.textContent=`Reference: ${paymentSessionId}`;
+        updateStatusBox(data.status);
+      }catch(error){
+        directBillingMode=true;
+        paymentSessionId="";
+        localStorage.removeItem("paymentSessionId");
+        sessionBox.textContent="Direct billing fallback is active";
+        updateStatusBox("PENDING","Direct Billing");
+        setMessage("Payment reference could not be created. Direct billing fallback is ready.","error");
+      }
     }
 
     async function generateBill(){
       const wasAlreadyBusy=isFinalizingPayment;
       if(!wasAlreadyBusy)setPaymentActionState(true);
       try{
+        const payload=directBillingMode
+          ? {
+            items:cart,
+            provider:paymentMethod,
+            customer:customer||{},
+            paymentReference:getDirectPaymentReference()
+          }
+          : {paymentSessionId};
         const data=await fetchJson("/bills",{
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({paymentSessionId})
+          body:JSON.stringify(payload)
         });
       localStorage.removeItem("pendingCheckoutCart");
       localStorage.removeItem("pendingCustomer");
@@ -243,6 +268,7 @@
 
     async function checkPaymentStatus(){
       if(isFinalizingPayment)return;
+      if(directBillingMode){setMessage("Direct billing mode does not use payment polling.","error");return;}
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       if(paymentMethod!=="manual-upi"){setMessage("Use the confirm button for cash or cash on delivery.","error");return;}
       try{
@@ -269,6 +295,13 @@
 
     async function confirmManualUpiReceipt(){
       if(isFinalizingPayment)return;
+      if(directBillingMode){
+        try{
+          setPaymentActionState(true);
+          await generateBill();
+        }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+        return;
+      }
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       try{
         setPaymentActionState(true);
@@ -283,6 +316,13 @@
 
     async function confirmCurrentMethod(){
       if(isFinalizingPayment)return;
+      if(directBillingMode){
+        try{
+          setPaymentActionState(true);
+          await generateBill();
+        }catch(error){setMessage(error.message,"error");setPaymentActionState(false);}
+        return;
+      }
       if(!paymentSessionId){setMessage("Payment reference is not ready yet.","error");return;}
       if(paymentMethod==="manual-upi"){
         await confirmManualUpiReceipt();
@@ -314,12 +354,8 @@
       renderOrder();
       setMethod(paymentMethod);
       if(!cart.length)return;
-      try{
-        await createPaymentSession(true);
-        startPolling();
-      }catch(error){
-        setMessage(error.message,"error");
-      }
+      await createPaymentSession(true);
+      if(!directBillingMode)startPolling();
     })();
   </script>
   <script src="pwa.js"></script>

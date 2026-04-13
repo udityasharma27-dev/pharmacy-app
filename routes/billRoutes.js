@@ -8,6 +8,7 @@ const PaymentSession = require("../models/PaymentSession");
 const { requireAuth } = require("../middleware/auth");
 const { recordAudit } = require("../utils/audit");
 const { normalizeOrderSource, normalizeCustomerContext } = require("../services/commerceMode");
+const { buildCheckoutPayload } = require("../services/checkoutPricing");
 
 router.use(requireAuth);
 
@@ -198,12 +199,14 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
     }
   }
 
-  paymentSession.status = "BILLED";
-  paymentSession.billId = bill._id;
-  if (dbSession) {
-    await paymentSession.save({ session: dbSession });
-  } else {
-    await paymentSession.save();
+  if (typeof paymentSession.save === "function") {
+    paymentSession.status = "BILLED";
+    paymentSession.billId = bill._id;
+    if (dbSession) {
+      await paymentSession.save({ session: dbSession });
+    } else {
+      await paymentSession.save();
+    }
   }
 
   const customerPhone = normalizePhone(paymentSession.customer?.phone);
@@ -266,7 +269,31 @@ router.post("/", async (req, res) => {
     const paymentSessionId = String(req.body.paymentSessionId || "").trim();
 
     if (!paymentSessionId) {
-      return res.status(400).json({ success: false, message: "Payment session is required" });
+      const payload = await buildCheckoutPayload(req);
+      const directPayment = {
+        userId: req.user.id,
+        ...payload,
+        status: "PAID",
+        paymentReference: String(req.body.paymentReference || "").trim() || `${payload.provider.toUpperCase()}-${Date.now()}`,
+        billId: null
+      };
+
+      const result = await createBillFromPaymentSession(directPayment, req, null);
+
+      if (result.status === 200 && result.audit) {
+        await recordAudit(req, "bill.create", "bill", result.audit.entityId, {
+          totalAmount: result.audit.totalAmount,
+          discountAmount: result.audit.discountAmount,
+          totalProfit: result.audit.totalProfit,
+          storeId: result.audit.storeId,
+          storeName: result.audit.storeName,
+          itemCount: result.audit.itemCount,
+          source: result.audit.source,
+          customerContext: result.audit.customerContext
+        });
+      }
+
+      return res.status(result.status).json(result.body);
     }
 
     const paymentSession = await PaymentSession.findById(paymentSessionId);

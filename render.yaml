@@ -28,8 +28,9 @@ services:
         value: 168
       - key: ALLOW_MANUAL_UPI_CONFIRM
         value: true
-  - type: static
+  - type: web
     name: lumiere-de-vie-pharma-web
+    runtime: static
     buildCommand: node scripts/build-static.js
     staticPublishPath: ./web-dist
     pullRequestPreviewsEnabled: true

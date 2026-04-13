@@ -13,17 +13,22 @@ const { buildCheckoutPayload } = require("../services/checkoutPricing");
 router.use(requireAuth);
 
 async function buildInvoiceNumber() {
-  const now = new Date();
-  const monthCode = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const prefix = `LVP-${monthCode}-`;
-  const latestBill = await Bill.findOne({
-    invoiceNumber: { $regex: `^${prefix}` }
-  }).sort({ createdAt: -1, _id: -1 }).lean();
-  const latestSequence = latestBill?.invoiceNumber
-    ? Number(String(latestBill.invoiceNumber).split("-").pop())
-    : 0;
-  const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1;
-  return `${prefix}${String(nextSequence).padStart(4, "0")}`;
+  try {
+    const now = new Date();
+    const monthCode = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prefix = `LVP-${monthCode}-`;
+    const latestBill = await Bill.findOne({
+      invoiceNumber: { $regex: `^${prefix}` }
+    }).sort({ createdAt: -1, _id: -1 }).lean();
+    const latestSequence = latestBill?.invoiceNumber
+      ? Number(String(latestBill.invoiceNumber).split("-").pop())
+      : 0;
+    const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1;
+    return `${prefix}${String(nextSequence).padStart(4, "0")}`;
+  } catch (error) {
+    console.error("Invoice number generation failed", error);
+    return `LVP-FALLBACK-${Date.now()}`;
+  }
 }
 
 function normalizePhone(phone) {
@@ -185,17 +190,42 @@ async function createBillFromPaymentSession(paymentSession, req, dbSession = nul
     paymentStatus: "PAID"
   });
 
-  if (dbSession) {
-    await bill.save({ session: dbSession });
-  } else {
-    await bill.save();
+  try {
+    if (dbSession) {
+      await bill.save({ session: dbSession });
+    } else {
+      await bill.save();
+    }
+  } catch (error) {
+    console.error("Bill save failed", {
+      message: error?.message,
+      stack: error?.stack,
+      billPreview: {
+        itemCount: billItems.length,
+        totalAmount: total,
+        invoiceNumber,
+        source: bill.source,
+        customerContext: bill.customerContext
+      }
+    });
+    throw error;
   }
 
   for (const item of preparedItems) {
-    if (dbSession) {
-      await item.med.save({ session: dbSession });
-    } else {
-      await item.med.save();
+    try {
+      if (dbSession) {
+        await item.med.save({ session: dbSession });
+      } else {
+        await item.med.save();
+      }
+    } catch (error) {
+      console.error("Medicine stock update failed while creating bill", {
+        message: error?.message,
+        medicineId: String(item.med?._id || ""),
+        brandId: String(item.brand?._id || ""),
+        quantity: item.quantity
+      });
+      throw error;
     }
   }
 
@@ -398,7 +428,20 @@ router.post("/", async (req, res) => {
 
     return res.status(result.status).json(result.body);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Unable to create bill" });
+    console.error("Bill creation failed", {
+      message: err?.message,
+      stack: err?.stack,
+      userId: req.user?.id,
+      paymentSessionId: String(req.body?.paymentSessionId || ""),
+      itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
+      provider: req.body?.provider
+    });
+    const safeMessage = err?.status && err?.message
+      ? err.message
+      : (err?.name === "ValidationError" || err?.name === "CastError")
+        ? "Bill data is invalid"
+        : "Unable to create bill";
+    res.status(err?.status || 500).json({ success: false, message: safeMessage });
   }
 });
 
